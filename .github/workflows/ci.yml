@@ -11,21 +11,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
           cache: true
-      - name: setup golangci-lint
+
+      - name: go vet
+        run: make vet
+
+      - name: golangci-lint
         uses: golangci/golangci-lint-action@v8
         with:
           version: v2.5.0
-          args: --version
-      - name: go vet
-        run: make vet
-      - name: golangci-lint
-        run: make golangci
-      - name: go test + e2e
-        run: make test-all
+
+      - name: unit tests
+        run: make test
+
+      - name: E2E tests
+        env:
+          WP2EMDASH_E2E_TEST_ENABLED: "true"
+        run: make test-e2e
+
       - name: go build
         run: make build
 
@@ -38,13 +45,22 @@ jobs:
         goarch: [amd64, arm64]
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # needed for git describe
+
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
           cache: true
+
       - name: build ${{ matrix.goos }}/${{ matrix.goarch }}
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: 0
-        run: go build -o /tmp/wp2emdash-${{ matrix.goos }}-${{ matrix.goarch }} ./cmd/wp2emdash
+        run: |
+          VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo dev)
+          go build \
+            -ldflags="-X github.com/rokubunnoni-inc/wp2emdash/internal/cli.Version=${VERSION}" \
+            -o /tmp/wp2emdash-${{ matrix.goos }}-${{ matrix.goarch }} \
+            ./cmd/wp2emdash
