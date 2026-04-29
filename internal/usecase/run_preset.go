@@ -2,54 +2,87 @@ package usecase
 
 import (
 	"context"
-	"fmt"
 	"path/filepath"
 
 	"github.com/rokubunnoni-inc/wp2emdash/internal/domain/preset"
+	"github.com/rokubunnoni-inc/wp2emdash/internal/usecase/step"
 )
 
+// PresetParams holds the runtime configuration for preset execution.
 type PresetParams struct {
 	WPRoot  string
 	OutDir  string
 	Version string
 }
 
-func RunPresetStep(ctx context.Context, step preset.Step, params PresetParams) error {
-	switch step.Kind {
-	case "doctor":
+// defaultRegistry holds the step handlers used by RunPresetStep.
+var defaultRegistry = buildRegistry()
+
+func buildRegistry() *step.Registry {
+	reg := step.NewRegistry()
+
+	reg.Register("doctor", func(ctx context.Context, _ preset.Step, _ step.Params) error {
 		_ = RunDoctor(ctx)
 		return nil
-	case "audit":
+	})
+
+	reg.Register("audit", func(ctx context.Context, _ preset.Step, p step.Params) error {
 		_, err := RunAudit(ctx, AuditParams{
-			WPRoot:  params.WPRoot,
-			OutDir:  params.OutDir,
+			WPRoot:  p.WPRoot,
+			OutDir:  p.OutDir,
 			Write:   true,
-			Version: params.Version,
+			Version: p.Version,
 		})
 		return err
-	case "media-scan-sample":
+	})
+
+	uploadsDir := func(p step.Params) string {
+		return filepath.Join(p.WPRoot, "wp-content", "uploads")
+	}
+
+	reg.Register("media-scan-sample", func(_ context.Context, _ preset.Step, p step.Params) error {
 		_, err := RunMediaScan(MediaScanParams{
-			Dir:      filepath.Join(params.WPRoot, "wp-content", "uploads"),
-			OutDir:   params.OutDir,
+			Dir:      uploadsDir(p),
+			OutDir:   p.OutDir,
 			MaxFiles: 200,
 		})
 		return err
-	case "media-scan":
+	})
+
+	reg.Register("media-scan", func(_ context.Context, _ preset.Step, p step.Params) error {
 		_, err := RunMediaScan(MediaScanParams{
-			Dir:    filepath.Join(params.WPRoot, "wp-content", "uploads"),
-			OutDir: params.OutDir,
+			Dir:    uploadsDir(p),
+			OutDir: p.OutDir,
 		})
 		return err
-	case "media-scan-hash":
+	})
+
+	reg.Register("media-scan-hash", func(_ context.Context, _ preset.Step, p step.Params) error {
 		_, err := RunMediaScan(MediaScanParams{
-			Dir:    filepath.Join(params.WPRoot, "wp-content", "uploads"),
-			OutDir: params.OutDir,
+			Dir:    uploadsDir(p),
+			OutDir: p.OutDir,
 			Hash:   true,
 		})
 		return err
-	case "report", "todo":
+	})
+
+	reg.Register("report", func(_ context.Context, _ preset.Step, _ step.Params) error {
 		return nil
-	default:
-		return fmt.Errorf("unhandled step kind %q", step.Kind)
-	}
+	})
+	reg.Register("todo", func(_ context.Context, _ preset.Step, _ step.Params) error {
+		return nil
+	})
+
+	return reg
+}
+
+// RunPresetStep executes a single preset step using the default step registry.
+// New step kinds can be registered into a custom Registry without modifying
+// this function; see package step for the registration API.
+func RunPresetStep(ctx context.Context, s preset.Step, params PresetParams) error {
+	return defaultRegistry.Execute(ctx, s, step.Params{
+		WPRoot:  params.WPRoot,
+		OutDir:  params.OutDir,
+		Version: params.Version,
+	})
 }
