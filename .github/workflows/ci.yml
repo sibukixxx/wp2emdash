@@ -6,9 +6,42 @@ on:
   pull_request:
     branches: [main]
 
+# 同一ブランチ/PRへの連続 push で古いランをキャンセルして CI minutes を節約する。
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+# Makefile は GOCACHE ?= /tmp/wp2emdash-go-build で上書きする。
+# ここで setup-go がキャッシュするパスに揃えることでビルドキャッシュを有効化する。
+env:
+  GOCACHE: /home/runner/.cache/go-build
+
 jobs:
-  test:
+  # ── lint ─────────────────────────────────────────────────────────────────
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.5.0
+
+  # ── test ─────────────────────────────────────────────────────────────────
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -20,40 +53,47 @@ jobs:
       - name: go vet
         run: make vet
 
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v8
-        with:
-          version: v2.5.0
+      - name: unit tests (race + coverage)
+        run: go test -race -count=1 -coverprofile=coverage.out ./...
 
-      - name: unit tests
-        run: make test
+      - name: coverage summary
+        run: go tool cover -func=coverage.out
 
       - name: E2E tests
         env:
           WP2EMDASH_E2E_TEST_ENABLED: "true"
         run: make test-e2e
 
+      - name: govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+
       - name: go build
         run: make build
 
+  # ── cross-build ──────────────────────────────────────────────────────────
   cross-build:
+    name: Cross-build / ${{ matrix.goos }}-${{ matrix.goarch }}
     runs-on: ubuntu-latest
-    needs: test
+    needs: [lint, test]
+    timeout-minutes: 10
     strategy:
+      fail-fast: false # 1プラットフォームの失敗で他を止めない
       matrix:
         goos: [darwin, linux]
         goarch: [amd64, arm64]
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # needed for git describe
+          fetch-depth: 0 # git describe でタグを取得するために必要
 
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
           cache: true
 
-      - name: build ${{ matrix.goos }}/${{ matrix.goarch }}
+      - name: build
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
