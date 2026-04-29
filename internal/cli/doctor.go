@@ -1,11 +1,11 @@
 package cli
 
 import (
-	"encoding/json"
-	"fmt"
+	"errors"
 
 	"github.com/spf13/cobra"
 
+	"github.com/rokubunnoni-inc/wp2emdash/internal/cli/output"
 	"github.com/rokubunnoni-inc/wp2emdash/internal/usecase"
 )
 
@@ -29,13 +29,12 @@ func runDoctor(cmd *cobra.Command) error {
 	rep := usecase.RunDoctor(cmd.Context())
 
 	if mustBool(cmd, "json") {
-		enc := json.NewEncoder(cmd.OutOrStdout())
-		enc.SetIndent("", "  ")
-		if err := enc.Encode(rep); err != nil {
+		if err := output.JSON(cmd.OutOrStdout(), rep); err != nil {
 			return err
 		}
 	} else {
-		if _, err := fmt.Fprintln(cmd.OutOrStdout(), "wp2emdash doctor"); err != nil {
+		w := cmd.OutOrStdout()
+		if err := output.Println(w, "wp2emdash doctor"); err != nil {
 			return err
 		}
 		for _, c := range rep.Checks {
@@ -47,23 +46,21 @@ func runDoctor(cmd *cobra.Command) error {
 			if c.Found {
 				status = c.Path
 			}
-			if _, err := fmt.Fprintf(cmd.OutOrStdout(), "  [%s] %-10s %s\n", tag, c.Name, status); err != nil {
+			if err := output.Printf(w, "  [%s] %-10s %s\n", tag, c.Name, status); err != nil {
 				return err
 			}
 		}
-		if rep.OK {
-			if _, err := fmt.Fprintln(cmd.OutOrStdout(), "OK"); err != nil {
-				return err
-			}
-		} else {
-			if _, err := fmt.Fprintln(cmd.OutOrStdout(), "FAIL: required tool(s) missing"); err != nil {
-				return err
-			}
+		msg := "OK"
+		if !rep.OK {
+			msg = "FAIL: required tool(s) missing"
+		}
+		if err := output.Println(w, msg); err != nil {
+			return err
 		}
 	}
 
 	if !rep.OK {
-		return fmt.Errorf("required tool missing")
+		return errors.New("required tool missing")
 	}
 	return nil
 }

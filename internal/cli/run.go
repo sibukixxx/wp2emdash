@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/rokubunnoni-inc/wp2emdash/internal/cli/output"
 	"github.com/rokubunnoni-inc/wp2emdash/internal/domain/preset"
 	"github.com/rokubunnoni-inc/wp2emdash/internal/usecase"
 )
@@ -47,22 +48,21 @@ func runPreset(cmd *cobra.Command, _ []string) error {
 	wpRoot := mustString(cmd, "wp-root")
 	outDir := mustString(cmd, "out")
 
-	if _, err := fmt.Fprintf(cmd.OutOrStdout(), "preset: %s\n", p.Name); err != nil {
+	w := cmd.OutOrStdout()
+	if err := output.Printf(w, "preset: %s\n", p.Name); err != nil {
 		return err
 	}
-	if _, err := fmt.Fprintf(cmd.OutOrStdout(), "  %s\n", p.Description); err != nil {
+	if err := output.Printf(w, "  %s\n", p.Description); err != nil {
 		return err
 	}
+	modeMsg := "  mode:   apply"
 	if dryRun {
-		if _, err := fmt.Fprintln(cmd.OutOrStdout(), "  mode:   dry-run (pass --apply to execute)"); err != nil {
-			return err
-		}
-	} else {
-		if _, err := fmt.Fprintln(cmd.OutOrStdout(), "  mode:   apply"); err != nil {
-			return err
-		}
+		modeMsg = "  mode:   dry-run (pass --apply to execute)"
 	}
-	if _, err := fmt.Fprintln(cmd.OutOrStdout(), ""); err != nil {
+	if err := output.Println(w, modeMsg); err != nil {
+		return err
+	}
+	if err := output.Println(w, ""); err != nil {
 		return err
 	}
 
@@ -73,11 +73,11 @@ func runPreset(cmd *cobra.Command, _ []string) error {
 		Version: Version,
 	}
 	for _, ph := range p.Phases {
-		if _, err := fmt.Fprintf(cmd.OutOrStdout(), "phase: %s\n", ph.Name); err != nil {
+		if err := output.Printf(w, "phase: %s\n", ph.Name); err != nil {
 			return err
 		}
 		for _, step := range ph.Steps {
-			if _, err := fmt.Fprintf(cmd.OutOrStdout(), "  - [%-18s] %s\n", step.Kind, step.Summary); err != nil {
+			if err := output.Printf(w, "  - [%-18s] %s\n", step.Kind, step.Summary); err != nil {
 				return err
 			}
 			if dryRun {
@@ -87,17 +87,17 @@ func runPreset(cmd *cobra.Command, _ []string) error {
 				return fmt.Errorf("%s/%s failed: %w", ph.Name, step.Kind, err)
 			}
 			if step.Kind == "report" {
-				if _, err := fmt.Fprintf(cmd.OutOrStdout(), "    → %s/risk-report.md\n", outDir); err != nil {
+				if err := output.Printf(w, "    → %s/risk-report.md\n", outDir); err != nil {
 					return err
 				}
 			}
 		}
-		if _, err := fmt.Fprintln(cmd.OutOrStdout(), ""); err != nil {
+		if err := output.Println(w, ""); err != nil {
 			return err
 		}
 	}
 	if !dryRun {
-		if _, err := fmt.Fprintf(cmd.OutOrStdout(), "output: %s\n", outDir); err != nil {
+		if err := output.Printf(w, "output: %s\n", outDir); err != nil {
 			return err
 		}
 	}

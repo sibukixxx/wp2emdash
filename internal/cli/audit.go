@@ -1,12 +1,11 @@
 package cli
 
 import (
-	"encoding/json"
-	"fmt"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
 
+	"github.com/rokubunnoni-inc/wp2emdash/internal/cli/output"
 	"github.com/rokubunnoni-inc/wp2emdash/internal/usecase"
 )
 
@@ -45,30 +44,26 @@ func runAuditCmd(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
+	w := cmd.OutOrStdout()
 	if write && !emitJSON {
 		abs, _ := filepath.Abs(outDir)
-		if _, err := fmt.Fprintf(cmd.OutOrStdout(), "wrote %s/summary.json\n", abs); err != nil {
+		if err := output.Printf(w, "wrote %s/summary.json\n", abs); err != nil {
 			return err
 		}
-		if _, err := fmt.Fprintf(cmd.OutOrStdout(), "wrote %s/risk-report.md\n", abs); err != nil {
+		if err := output.Printf(w, "wrote %s/risk-report.md\n", abs); err != nil {
 			return err
 		}
 	}
 
 	if emitJSON {
-		enc := json.NewEncoder(cmd.OutOrStdout())
-		enc.SetIndent("", "  ")
-		return enc.Encode(res.Bundle)
+		return output.JSON(w, res.Bundle)
 	}
 
 	a := res.Bundle.Audit
 	s := res.Bundle.Score
-	if _, err := fmt.Fprintf(cmd.OutOrStdout(), "Risk score: %d (%s) — %s\n", s.Score, s.Level, s.Estimate); err != nil {
+	if err := output.Printf(w, "Risk score: %d (%s) — %s\n", s.Score, s.Level, s.Estimate); err != nil {
 		return err
 	}
-	if _, err := fmt.Fprintf(cmd.OutOrStdout(), "Posts: %d, Pages: %d, Active plugins: %d, Active theme: %s\n",
-		a.Content.Posts, a.Content.Pages, a.Plugins.ActiveCount, a.Theme.ActiveTheme); err != nil {
-		return err
-	}
-	return nil
+	return output.Printf(w, "Posts: %d, Pages: %d, Active plugins: %d, Active theme: %s\n",
+		a.Content.Posts, a.Content.Pages, a.Plugins.ActiveCount, a.Theme.ActiveTheme)
 }

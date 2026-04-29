@@ -1,12 +1,12 @@
 package cli
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
 
+	"github.com/rokubunnoni-inc/wp2emdash/internal/cli/output"
 	"github.com/rokubunnoni-inc/wp2emdash/internal/usecase"
 )
 
@@ -59,27 +59,26 @@ func runMediaScan(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
+	w := cmd.OutOrStdout()
 	if emitJSON {
-		stdout := json.NewEncoder(cmd.OutOrStdout())
-		stdout.SetIndent("", "  ")
-		return stdout.Encode(res.Manifest)
+		return output.JSON(w, res.Manifest)
 	}
 
-	if _, err := fmt.Fprintf(cmd.OutOrStdout(), "manifest: %s\n", res.Path); err != nil {
+	if err := output.Printf(w, "manifest: %s\n", res.Path); err != nil {
 		return err
 	}
-	if _, err := fmt.Fprintf(cmd.OutOrStdout(), "files:    %d\n", res.Manifest.TotalFiles); err != nil {
+	if err := output.Printf(w, "files:    %d\n", res.Manifest.TotalFiles); err != nil {
 		return err
 	}
-	if _, err := fmt.Fprintf(cmd.OutOrStdout(), "bytes:    %d\n", res.Manifest.TotalBytes); err != nil {
+	if err := output.Printf(w, "bytes:    %d\n", res.Manifest.TotalBytes); err != nil {
 		return err
 	}
 	if len(res.Manifest.Extensions) > 0 {
-		if _, err := fmt.Fprintln(cmd.OutOrStdout(), "ext:"); err != nil {
+		if err := output.Println(w, "ext:"); err != nil {
 			return err
 		}
 		for ext, n := range res.Manifest.Extensions {
-			if _, err := fmt.Fprintf(cmd.OutOrStdout(), "  %-8s %d\n", ext, n); err != nil {
+			if err := output.Printf(w, "  %-8s %d\n", ext, n); err != nil {
 				return err
 			}
 		}
