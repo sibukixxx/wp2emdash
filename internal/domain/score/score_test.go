@@ -3,11 +3,11 @@ package score
 import (
 	"testing"
 
-	"github.com/rokubunnoni-inc/wp2emdash/internal/wordpress"
+	"github.com/rokubunnoni-inc/wp2emdash/internal/domain/audit"
 )
 
 func TestComputeReturnsSimpleForEmptyAudit(t *testing.T) {
-	got := Compute(wordpress.Audit{})
+	got := Compute(audit.Audit{})
 	if got.Score != 0 {
 		t.Fatalf("score: want 0, got %d", got.Score)
 	}
@@ -20,7 +20,7 @@ func TestComputeReturnsSimpleForEmptyAudit(t *testing.T) {
 }
 
 func TestComputeAccumulatesSignals(t *testing.T) {
-	a := wordpress.Audit{}
+	a := audit.Audit{}
 	a.Content.Posts = 600
 	a.Content.Pages = 25
 	a.Plugins.ActiveCount = 22

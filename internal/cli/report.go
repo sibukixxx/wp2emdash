@@ -1,13 +1,10 @@
 package cli
 
 import (
-	"encoding/json"
-	"fmt"
-	"os"
-
 	"github.com/spf13/cobra"
 
-	"github.com/rokubunnoni-inc/wp2emdash/internal/report"
+	"github.com/rokubunnoni-inc/wp2emdash/internal/usecase"
+	"github.com/rokubunnoni-inc/wp2emdash/internal/usecase/reporting"
 )
 
 func newReportCmd() *cobra.Command {
@@ -29,19 +26,13 @@ func runReport(cmd *cobra.Command, _ []string) error {
 	toStdout := mustBool(cmd, "stdout")
 	outDir := mustString(cmd, "out")
 
-	f, err := os.Open(from)
+	bundle, err := usecase.LoadReportBundle(from)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
-
-	var bundle report.Bundle
-	if err := json.NewDecoder(f).Decode(&bundle); err != nil {
-		return fmt.Errorf("parse %s: %w", from, err)
-	}
 
 	if toStdout {
-		return report.RenderMarkdown(cmd.OutOrStdout(), bundle)
+		return reporting.RenderMarkdown(cmd.OutOrStdout(), bundle)
 	}
-	return report.WriteAll(outDir, bundle)
+	return usecase.WriteReport(outDir, bundle)
 }

@@ -4,13 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
-	"time"
 
 	"github.com/spf13/cobra"
 
-	"github.com/rokubunnoni-inc/wp2emdash/internal/report"
-	"github.com/rokubunnoni-inc/wp2emdash/internal/score"
-	"github.com/rokubunnoni-inc/wp2emdash/internal/wordpress"
+	"github.com/rokubunnoni-inc/wp2emdash/internal/usecase"
 )
 
 func newAuditCmd() *cobra.Command {
@@ -38,42 +35,30 @@ func runAuditCmd(cmd *cobra.Command, _ []string) error {
 	emitJSON := mustBool(cmd, "json")
 	write := mustBool(cmd, "write")
 
-	auditor, err := wordpress.New(wpRoot)
+	res, err := usecase.RunAudit(cmd.Context(), usecase.AuditParams{
+		WPRoot:  wpRoot,
+		OutDir:  outDir,
+		Write:   write,
+		Version: Version,
+	})
 	if err != nil {
 		return err
 	}
 
-	a, err := auditor.Run(cmd.Context())
-	if err != nil {
-		return err
-	}
-	s := score.Compute(a)
-
-	bundle := report.Bundle{
-		GeneratedAt: time.Now().UTC().Format(time.RFC3339),
-		Tool:        "wp2emdash",
-		Version:     Version,
-		Audit:       a,
-		Score:       s,
-	}
-
-	if write {
+	if write && !emitJSON {
 		abs, _ := filepath.Abs(outDir)
-		if err := report.WriteAll(outDir, bundle); err != nil {
-			return err
-		}
-		if !emitJSON {
-			fmt.Fprintf(cmd.OutOrStdout(), "wrote %s/summary.json\n", abs)
-			fmt.Fprintf(cmd.OutOrStdout(), "wrote %s/risk-report.md\n", abs)
-		}
+		fmt.Fprintf(cmd.OutOrStdout(), "wrote %s/summary.json\n", abs)
+		fmt.Fprintf(cmd.OutOrStdout(), "wrote %s/risk-report.md\n", abs)
 	}
 
 	if emitJSON {
 		enc := json.NewEncoder(cmd.OutOrStdout())
 		enc.SetIndent("", "  ")
-		return enc.Encode(bundle)
+		return enc.Encode(res.Bundle)
 	}
 
+	a := res.Bundle.Audit
+	s := res.Bundle.Score
 	fmt.Fprintf(cmd.OutOrStdout(), "Risk score: %d (%s) — %s\n", s.Score, s.Level, s.Estimate)
 	fmt.Fprintf(cmd.OutOrStdout(), "Posts: %d, Pages: %d, Active plugins: %d, Active theme: %s\n",
 		a.Content.Posts, a.Content.Pages, a.Plugins.ActiveCount, a.Theme.ActiveTheme)

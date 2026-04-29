@@ -1,6 +1,6 @@
 // Package report renders an Audit + Score into JSON / Markdown artifacts
 // that downstream commands (and humans selling migrations) consume.
-package report
+package reporting
 
 import (
 	"encoding/json"
@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/rokubunnoni-inc/wp2emdash/internal/score"
-	"github.com/rokubunnoni-inc/wp2emdash/internal/wordpress"
+	"github.com/rokubunnoni-inc/wp2emdash/internal/domain/audit"
+	"github.com/rokubunnoni-inc/wp2emdash/internal/domain/score"
 )
 
 // Bundle is the umbrella struct written to summary.json. Keeping this in one
@@ -21,7 +21,7 @@ type Bundle struct {
 	GeneratedAt string         `json:"generated_at"`
 	Tool        string         `json:"tool"`
 	Version     string         `json:"version"`
-	Audit       wordpress.Audit `json:"audit"`
+	Audit       audit.Audit   `json:"audit"`
 	Score       score.Result   `json:"score"`
 }
 
@@ -37,6 +37,20 @@ func WriteAll(outDir string, b Bundle) error {
 		return err
 	}
 	return nil
+}
+
+func ReadBundle(path string) (Bundle, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return Bundle{}, err
+	}
+	defer f.Close()
+
+	var bundle Bundle
+	if err := json.NewDecoder(f).Decode(&bundle); err != nil {
+		return Bundle{}, err
+	}
+	return bundle, nil
 }
 
 func writeJSON(path string, v any) error {

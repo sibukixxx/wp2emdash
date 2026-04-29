@@ -1,4 +1,4 @@
-package wordpress
+package wpcli
 
 import (
 	"bufio"

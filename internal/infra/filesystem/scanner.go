@@ -1,7 +1,7 @@
-// Package media implements `wp2emdash media scan` — produces a manifest of
+// Package filesystem implements `wp2emdash media scan` — produces a manifest of
 // wp-content/uploads (or any directory) so it can be diff'd, hashed, and
 // fed into rclone / wrangler r2 / aws-cli for the actual transfer.
-package media
+package filesystem
 
 import (
 	"crypto/sha256"
@@ -13,27 +13,12 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/rokubunnoni-inc/wp2emdash/internal/domain/media"
 )
 
-type File struct {
-	Path   string `json:"path"`
-	Size   int64  `json:"size"`
-	SHA256 string `json:"sha256,omitempty"`
-	MIME   string `json:"mime,omitempty"`
-	Ext    string `json:"ext"`
-}
-
-// Manifest is what the JSON output of `media scan` parses to.
-type Manifest struct {
-	BaseDir    string         `json:"base_dir"`
-	TotalFiles int            `json:"total_files"`
-	TotalBytes int64          `json:"total_bytes"`
-	Extensions map[string]int `json:"extensions"`
-	Files      []File         `json:"files"`
-}
-
-// Options controls scan behavior.
-type Options struct {
+// ScanOptions controls scan behavior.
+type ScanOptions struct {
 	Hash      bool // compute SHA-256 per file (slow on large trees)
 	MaxFiles  int  // stop after this many files (0 = no limit) — used by sample mode
 	WithFiles bool // include the per-file array (false => extension histogram only)
@@ -41,12 +26,12 @@ type Options struct {
 
 // Scan walks dir and returns a Manifest. It tolerates per-file errors so a
 // broken symlink or unreadable file doesn't abort the entire scan.
-func Scan(dir string, opt Options) (Manifest, error) {
+func Scan(dir string, opt ScanOptions) (media.Manifest, error) {
 	abs, err := filepath.Abs(dir)
 	if err != nil {
-		return Manifest{}, err
+		return media.Manifest{}, err
 	}
-	manifest := Manifest{
+	manifest := media.Manifest{
 		BaseDir:    abs,
 		Extensions: map[string]int{},
 	}
@@ -70,7 +55,7 @@ func Scan(dir string, opt Options) (Manifest, error) {
 		manifest.Extensions[ext]++
 
 		if opt.WithFiles {
-			f := File{
+			f := media.File{
 				Path: rel,
 				Size: info.Size(),
 				Ext:  ext,

@@ -1,7 +1,7 @@
-// Package wordpress implements the WordPress-side data collection used by
+// Package wpcli implements the WordPress-side data collection used by
 // `wp2emdash audit`. Everything in here ultimately shells out to wp-cli, so
 // the tool can be run on any host that already has WordPress + WP-CLI set up.
-package wordpress
+package wpcli
 
 import (
 	"context"
@@ -13,83 +13,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/rokubunnoni-inc/wp2emdash/internal/domain/audit"
 	"github.com/rokubunnoni-inc/wp2emdash/internal/shell"
 )
-
-// Audit is the full structured audit payload produced for a WP install.
-// It mirrors the fields in scripts/audit/emdash-migration-audit.sh so the
-// scoring rubric stays identical between the bash and Go implementations.
-type Audit struct {
-	Site          SiteInfo      `json:"site"`
-	Content       ContentStats  `json:"content"`
-	Uploads       UploadsStats  `json:"uploads"`
-	Theme         ThemeStats    `json:"theme"`
-	Plugins       PluginsStats  `json:"plugins"`
-	Customization CustomStats   `json:"customization"`
-}
-
-type SiteInfo struct {
-	HomeURL     string `json:"home_url"`
-	SiteURL     string `json:"site_url"`
-	WPVersion   string `json:"wp_version"`
-	PHPVersion  string `json:"php_version"`
-	DBPrefix    string `json:"db_prefix"`
-	IsMultisite string `json:"is_multisite"`
-}
-
-type ContentStats struct {
-	Posts            int `json:"posts"`
-	Pages            int `json:"pages"`
-	Drafts           int `json:"drafts"`
-	PrivatePosts    int `json:"private_posts"`
-	Categories       int `json:"categories"`
-	Tags             int `json:"tags"`
-	Users            int `json:"users"`
-	ApprovedComments int `json:"approved_comments"`
-}
-
-type UploadsStats struct {
-	Exists                bool   `json:"exists"`
-	Size                  string `json:"size"`
-	FileCount             int    `json:"file_count"`
-	PostsWithUploadsPaths int    `json:"posts_with_uploads_paths"`
-	PostsWithHTTPURLs     int    `json:"posts_with_http_urls"`
-}
-
-type ThemeStats struct {
-	ActiveTheme           string `json:"active_theme"`
-	PHPFiles              int    `json:"php_files"`
-	CSSFiles              int    `json:"css_files"`
-	JSFiles               int    `json:"js_files"`
-	PageTemplates         int    `json:"page_templates"`
-	HookLikeOccurrences   int    `json:"hook_like_occurrences"`
-	JQueryLikeOccurrences int    `json:"jquery_like_occurrences"`
-}
-
-type PluginsStats struct {
-	ActiveCount     int  `json:"active_count"`
-	HasACF          bool `json:"has_acf"`
-	HasWooCommerce  bool `json:"has_woocommerce"`
-	HasSEO          bool `json:"has_seo"`
-	HasForm         bool `json:"has_form"`
-	HasRedirect     bool `json:"has_redirect"`
-	HasMember       bool `json:"has_member"`
-	HasMultilingual bool `json:"has_multilingual"`
-	HasCache        bool `json:"has_cache"`
-}
-
-type CustomStats struct {
-	CustomPostTypeCount             int `json:"custom_post_type_count"`
-	CustomTaxonomyCount             int `json:"custom_taxonomy_count"`
-	MUPluginCount                   int `json:"mu_plugin_count"`
-	MUPluginHookLikeOccurrences     int `json:"mu_plugin_hook_like_occurrences"`
-	ShortcodePostCount              int `json:"shortcode_post_count"`
-	SEOMetaCount                    int `json:"seo_meta_count"`
-	SerializedMetaCount             int `json:"serialized_meta_count"`
-	HtaccessRedirectLikeLines       int `json:"htaccess_redirect_like_lines"`
-	CodeRedirectLikeOccurrences     int `json:"code_redirect_like_occurrences"`
-	ExternalIntegrationOccurrences  int `json:"external_integration_like_occurrences"`
-}
 
 // Auditor is a stateful collector. WPRoot must be a WordPress install root
 // (the directory containing wp-config.php).
@@ -100,7 +26,7 @@ type Auditor struct {
 
 // New returns an Auditor pinned to wpRoot. The path is validated lazily when
 // Run is called so configuring the auditor from CLI flags is cheap.
-func New(wpRoot string) (*Auditor, error) {
+func NewAuditor(wpRoot string) (*Auditor, error) {
 	abs, err := filepath.Abs(wpRoot)
 	if err != nil {
 		return nil, fmt.Errorf("wp_root: %w", err)
@@ -110,12 +36,12 @@ func New(wpRoot string) (*Auditor, error) {
 
 // Run produces a complete Audit. Errors from individual probes are tolerated
 // — missing data shows up as zero values so downstream scoring still runs.
-func (a *Auditor) Run(ctx context.Context) (Audit, error) {
+func (a *Auditor) Run(ctx context.Context) (audit.Audit, error) {
 	if _, err := os.Stat(filepath.Join(a.WPRoot, "wp-config.php")); err != nil {
-		return Audit{}, fmt.Errorf("wp-config.php not found in %s", a.WPRoot)
+		return audit.Audit{}, fmt.Errorf("wp-config.php not found in %s", a.WPRoot)
 	}
 
-	out := Audit{}
+	out := audit.Audit{}
 	out.Site = a.collectSite(ctx)
 	out.Content = a.collectContent(ctx)
 	out.Uploads = a.collectUploads(ctx, out.Site.DBPrefix)
@@ -162,12 +88,12 @@ func (a *Auditor) wpDBQueryInt(ctx context.Context, sql string) int {
 	return n
 }
 
-func (a *Auditor) collectSite(ctx context.Context) SiteInfo {
+func (a *Auditor) collectSite(ctx context.Context) audit.SiteInfo {
 	prefix := a.wp(ctx, "db", "prefix")
 	if prefix == "" {
 		prefix = "wp_"
 	}
-	return SiteInfo{
+	return audit.SiteInfo{
 		HomeURL:     a.wp(ctx, "option", "get", "home"),
 		SiteURL:     a.wp(ctx, "option", "get", "siteurl"),
 		WPVersion:   a.wp(ctx, "core", "version"),
@@ -177,8 +103,8 @@ func (a *Auditor) collectSite(ctx context.Context) SiteInfo {
 	}
 }
 
-func (a *Auditor) collectContent(ctx context.Context) ContentStats {
-	return ContentStats{
+func (a *Auditor) collectContent(ctx context.Context) audit.ContentStats {
+	return audit.ContentStats{
 		Posts:            a.wpInt(ctx, "post", "list", "--post_type=post", "--post_status=publish", "--format=count"),
 		Pages:            a.wpInt(ctx, "post", "list", "--post_type=page", "--post_status=publish", "--format=count"),
 		Drafts:           a.wpInt(ctx, "post", "list", "--post_status=draft", "--format=count"),
@@ -190,8 +116,8 @@ func (a *Auditor) collectContent(ctx context.Context) ContentStats {
 	}
 }
 
-func (a *Auditor) collectUploads(ctx context.Context, prefix string) UploadsStats {
-	stats := UploadsStats{}
+func (a *Auditor) collectUploads(ctx context.Context, prefix string) audit.UploadsStats {
+	stats := audit.UploadsStats{}
 	uploadsDir := filepath.Join(a.WPRoot, "wp-content", "uploads")
 	if info, err := os.Stat(uploadsDir); err == nil && info.IsDir() {
 		stats.Exists = true
@@ -206,8 +132,8 @@ func (a *Auditor) collectUploads(ctx context.Context, prefix string) UploadsStat
 	return stats
 }
 
-func (a *Auditor) collectTheme(ctx context.Context, _ string) ThemeStats {
-	stats := ThemeStats{ActiveTheme: a.wp(ctx, "theme", "list", "--status=active", "--field=name")}
+func (a *Auditor) collectTheme(ctx context.Context, _ string) audit.ThemeStats {
+	stats := audit.ThemeStats{ActiveTheme: a.wp(ctx, "theme", "list", "--status=active", "--field=name")}
 	if stats.ActiveTheme == "" {
 		return stats
 	}
@@ -234,8 +160,8 @@ type pluginListJSONRow struct {
 	Status string `json:"status"`
 }
 
-func (a *Auditor) collectPlugins(ctx context.Context) PluginsStats {
-	stats := PluginsStats{}
+func (a *Auditor) collectPlugins(ctx context.Context) audit.PluginsStats {
+	stats := audit.PluginsStats{}
 	raw := a.wp(ctx, "plugin", "list", "--status=active", "--format=json")
 	if raw == "" {
 		return stats
@@ -279,8 +205,8 @@ func (a *Auditor) collectPlugins(ctx context.Context) PluginsStats {
 	return stats
 }
 
-func (a *Auditor) collectCustomization(ctx context.Context, prefix string) CustomStats {
-	stats := CustomStats{}
+func (a *Auditor) collectCustomization(ctx context.Context, prefix string) audit.CustomStats {
+	stats := audit.CustomStats{}
 
 	// Custom post types / taxonomies (excluding core ones).
 	cptOut := a.wp(ctx, "post-type", "list", "--field=name")

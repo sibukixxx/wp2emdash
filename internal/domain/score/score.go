@@ -4,7 +4,7 @@
 package score
 
 import (
-	"github.com/rokubunnoni-inc/wp2emdash/internal/wordpress"
+	"github.com/rokubunnoni-inc/wp2emdash/internal/domain/audit"
 )
 
 // Level groups the numeric score into the five sales-facing bands.
@@ -34,7 +34,7 @@ type Result struct {
 }
 
 // Compute applies the rubric to an audit and returns the rolled-up result.
-func Compute(a wordpress.Audit) Result {
+func Compute(a audit.Audit) Result {
 	res := Result{}
 	add := func(points int, code, text string, when bool) {
 		if !when {
