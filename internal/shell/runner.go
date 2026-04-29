@@ -6,6 +6,7 @@ package shell
 import (
 	"bytes"
 	"context"
+	"errors"
 	"os/exec"
 	"strings"
 )
@@ -52,7 +53,8 @@ func (r Runner) Run(ctx context.Context, name string, args ...string) (Result, e
 	res.Stderr = stderr.String()
 
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
 			res.ExitCode = exitErr.ExitCode()
 		} else {
 			res.ExitCode = -1

@@ -18,11 +18,11 @@ import (
 // type means downstream tools can consume a single JSON document instead of
 // joining several files together.
 type Bundle struct {
-	GeneratedAt string         `json:"generated_at"`
-	Tool        string         `json:"tool"`
-	Version     string         `json:"version"`
-	Audit       audit.Audit   `json:"audit"`
-	Score       score.Result   `json:"score"`
+	GeneratedAt string       `json:"generated_at"`
+	Tool        string       `json:"tool"`
+	Version     string       `json:"version"`
+	Audit       audit.Audit  `json:"audit"`
+	Score       score.Result `json:"score"`
 }
 
 // WriteAll writes summary.json + risk-report.md to outDir.
@@ -44,7 +44,9 @@ func ReadBundle(path string) (Bundle, error) {
 	if err != nil {
 		return Bundle{}, err
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 
 	var bundle Bundle
 	if err := json.NewDecoder(f).Decode(&bundle); err != nil {
@@ -58,7 +60,9 @@ func writeJSON(path string, v any) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 	enc := json.NewEncoder(f)
 	enc.SetIndent("", "  ")
 	return enc.Encode(v)
@@ -69,7 +73,9 @@ func writeMarkdown(path string, b Bundle) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 	return RenderMarkdown(f, b)
 }
 
@@ -81,8 +87,8 @@ func RenderMarkdown(w io.Writer, b Bundle) error {
 
 	var sb strings.Builder
 	wln := func(format string, args ...any) {
-		sb.WriteString(fmt.Sprintf(format, args...))
-		sb.WriteByte('\n')
+		_, _ = fmt.Fprintf(&sb, format, args...)
+		_ = sb.WriteByte('\n')
 	}
 
 	wln("# EmDash Migration Audit Report")

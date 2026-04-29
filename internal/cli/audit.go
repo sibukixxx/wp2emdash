@@ -47,8 +47,12 @@ func runAuditCmd(cmd *cobra.Command, _ []string) error {
 
 	if write && !emitJSON {
 		abs, _ := filepath.Abs(outDir)
-		fmt.Fprintf(cmd.OutOrStdout(), "wrote %s/summary.json\n", abs)
-		fmt.Fprintf(cmd.OutOrStdout(), "wrote %s/risk-report.md\n", abs)
+		if _, err := fmt.Fprintf(cmd.OutOrStdout(), "wrote %s/summary.json\n", abs); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(cmd.OutOrStdout(), "wrote %s/risk-report.md\n", abs); err != nil {
+			return err
+		}
 	}
 
 	if emitJSON {
@@ -59,8 +63,12 @@ func runAuditCmd(cmd *cobra.Command, _ []string) error {
 
 	a := res.Bundle.Audit
 	s := res.Bundle.Score
-	fmt.Fprintf(cmd.OutOrStdout(), "Risk score: %d (%s) — %s\n", s.Score, s.Level, s.Estimate)
-	fmt.Fprintf(cmd.OutOrStdout(), "Posts: %d, Pages: %d, Active plugins: %d, Active theme: %s\n",
-		a.Content.Posts, a.Content.Pages, a.Plugins.ActiveCount, a.Theme.ActiveTheme)
+	if _, err := fmt.Fprintf(cmd.OutOrStdout(), "Risk score: %d (%s) — %s\n", s.Score, s.Level, s.Estimate); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(cmd.OutOrStdout(), "Posts: %d, Pages: %d, Active plugins: %d, Active theme: %s\n",
+		a.Content.Posts, a.Content.Pages, a.Plugins.ActiveCount, a.Theme.ActiveTheme); err != nil {
+		return err
+	}
 	return nil
 }

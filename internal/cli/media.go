@@ -65,13 +65,23 @@ func runMediaScan(cmd *cobra.Command, _ []string) error {
 		return stdout.Encode(res.Manifest)
 	}
 
-	fmt.Fprintf(cmd.OutOrStdout(), "manifest: %s\n", res.Path)
-	fmt.Fprintf(cmd.OutOrStdout(), "files:    %d\n", res.Manifest.TotalFiles)
-	fmt.Fprintf(cmd.OutOrStdout(), "bytes:    %d\n", res.Manifest.TotalBytes)
+	if _, err := fmt.Fprintf(cmd.OutOrStdout(), "manifest: %s\n", res.Path); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(cmd.OutOrStdout(), "files:    %d\n", res.Manifest.TotalFiles); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(cmd.OutOrStdout(), "bytes:    %d\n", res.Manifest.TotalBytes); err != nil {
+		return err
+	}
 	if len(res.Manifest.Extensions) > 0 {
-		fmt.Fprintln(cmd.OutOrStdout(), "ext:")
+		if _, err := fmt.Fprintln(cmd.OutOrStdout(), "ext:"); err != nil {
+			return err
+		}
 		for ext, n := range res.Manifest.Extensions {
-			fmt.Fprintf(cmd.OutOrStdout(), "  %-8s %d\n", ext, n)
+			if _, err := fmt.Fprintf(cmd.OutOrStdout(), "  %-8s %d\n", ext, n); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

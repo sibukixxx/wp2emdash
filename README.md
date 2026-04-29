@@ -94,19 +94,32 @@ v0.1 では `minimal` を完全実装、それ以外は audit + media scan + rep
 
 ## 設計
 
+Clean Architecture 風に 3 層に整理：
+
 ```
 cmd/
   wp2emdash/main.go          エントリポイント
 internal/
-  cli/                        cobra コマンド定義（root / doctor / audit / media / report / run）
+  cli/                        cobra コマンド定義（flag 解析 + 出力フォーマットのみ）
+  usecase/                    各サブコマンドの orchestration
+    {audit,doctor,media_scan,report,run_preset}.go
+    reporting/                JSON / Markdown レポート生成
+  domain/                     純粋なデータ型・ビジネスルール
+    audit/                    Audit / SiteInfo / ContentStats など
+    media/                    Manifest / File
+    preset/                   フェーズプリセット定義
+    score/                    スコアリングルール（純粋関数）
+  infra/                      外部システム adapter
+    wpcli/                    wp-cli を叩く auditor
+    filesystem/               uploads スキャナ
   shell/                      os/exec の薄いラッパ（DryRun 対応）
-  wordpress/                  wp-cli 経由の audit 実装、ファイルシステム集計
-  media/                      uploads スキャナ・manifest
-  score/                      スコアリングルール
-  report/                     JSON / Markdown レポート
-  preset/                     フェーズプリセット定義
+test/
+  e2e/                        E2E テストヘルパー（fixtures / stubs / runner）
+    tests/                    実テストケース
 legacy-bash/                  v0 相当の bash スクリプト（同じ重み付け、参照用）
 ```
+
+依存方向: `cli → usecase → {domain, infra} → shell`。`domain` は外部に依存しない。
 
 設計原則は [`CONTRIBUTING.md`](CONTRIBUTING.md#設計原則) を参照。要約:
 
@@ -146,3 +159,16 @@ MIT — [`LICENSE`](LICENSE)。
 - [EmDash CMS](https://github.com/emdash-cms/emdash) — 移行先 CMS
 - [Cloudflare D1](https://developers.cloudflare.com/d1/) / [R2](https://developers.cloudflare.com/r2/) — EmDash の標準デプロイ先
 - [WP-CLI](https://wp-cli.org/) — `wp2emdash audit` が裏で叩く
+## Testing
+
+```bash
+make test
+make test TEST_RUN=TestComputeAccumulatesSignals
+make test-e2e
+make test-e2e E2E_RUN=TestAuditCommand
+make test-all
+make lint
+make fix
+```
+
+`make test` は通常の Go テストを実行し、`test/e2e/tests` は `make test-e2e` でのみ有効化される。

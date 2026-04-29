@@ -35,7 +35,9 @@ func runDoctor(cmd *cobra.Command) error {
 			return err
 		}
 	} else {
-		fmt.Fprintln(cmd.OutOrStdout(), "wp2emdash doctor")
+		if _, err := fmt.Fprintln(cmd.OutOrStdout(), "wp2emdash doctor"); err != nil {
+			return err
+		}
 		for _, c := range rep.Checks {
 			tag := "optional"
 			if c.Required {
@@ -45,12 +47,18 @@ func runDoctor(cmd *cobra.Command) error {
 			if c.Found {
 				status = c.Path
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "  [%s] %-10s %s\n", tag, c.Name, status)
+			if _, err := fmt.Fprintf(cmd.OutOrStdout(), "  [%s] %-10s %s\n", tag, c.Name, status); err != nil {
+				return err
+			}
 		}
 		if rep.OK {
-			fmt.Fprintln(cmd.OutOrStdout(), "OK")
+			if _, err := fmt.Fprintln(cmd.OutOrStdout(), "OK"); err != nil {
+				return err
+			}
 		} else {
-			fmt.Fprintln(cmd.OutOrStdout(), "FAIL: required tool(s) missing")
+			if _, err := fmt.Fprintln(cmd.OutOrStdout(), "FAIL: required tool(s) missing"); err != nil {
+				return err
+			}
 		}
 	}
 

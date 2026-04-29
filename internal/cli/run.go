@@ -47,14 +47,24 @@ func runPreset(cmd *cobra.Command, _ []string) error {
 	wpRoot := mustString(cmd, "wp-root")
 	outDir := mustString(cmd, "out")
 
-	fmt.Fprintf(cmd.OutOrStdout(), "preset: %s\n", p.Name)
-	fmt.Fprintf(cmd.OutOrStdout(), "  %s\n", p.Description)
-	if dryRun {
-		fmt.Fprintln(cmd.OutOrStdout(), "  mode:   dry-run (pass --apply to execute)")
-	} else {
-		fmt.Fprintln(cmd.OutOrStdout(), "  mode:   apply")
+	if _, err := fmt.Fprintf(cmd.OutOrStdout(), "preset: %s\n", p.Name); err != nil {
+		return err
 	}
-	fmt.Fprintln(cmd.OutOrStdout(), "")
+	if _, err := fmt.Fprintf(cmd.OutOrStdout(), "  %s\n", p.Description); err != nil {
+		return err
+	}
+	if dryRun {
+		if _, err := fmt.Fprintln(cmd.OutOrStdout(), "  mode:   dry-run (pass --apply to execute)"); err != nil {
+			return err
+		}
+	} else {
+		if _, err := fmt.Fprintln(cmd.OutOrStdout(), "  mode:   apply"); err != nil {
+			return err
+		}
+	}
+	if _, err := fmt.Fprintln(cmd.OutOrStdout(), ""); err != nil {
+		return err
+	}
 
 	ctx := cmd.Context()
 	params := usecase.PresetParams{
@@ -63,9 +73,13 @@ func runPreset(cmd *cobra.Command, _ []string) error {
 		Version: Version,
 	}
 	for _, ph := range p.Phases {
-		fmt.Fprintf(cmd.OutOrStdout(), "phase: %s\n", ph.Name)
+		if _, err := fmt.Fprintf(cmd.OutOrStdout(), "phase: %s\n", ph.Name); err != nil {
+			return err
+		}
 		for _, step := range ph.Steps {
-			fmt.Fprintf(cmd.OutOrStdout(), "  - [%-18s] %s\n", step.Kind, step.Summary)
+			if _, err := fmt.Fprintf(cmd.OutOrStdout(), "  - [%-18s] %s\n", step.Kind, step.Summary); err != nil {
+				return err
+			}
 			if dryRun {
 				continue
 			}
@@ -73,13 +87,19 @@ func runPreset(cmd *cobra.Command, _ []string) error {
 				return fmt.Errorf("%s/%s failed: %w", ph.Name, step.Kind, err)
 			}
 			if step.Kind == "report" {
-				fmt.Fprintf(cmd.OutOrStdout(), "    → %s/risk-report.md\n", outDir)
+				if _, err := fmt.Fprintf(cmd.OutOrStdout(), "    → %s/risk-report.md\n", outDir); err != nil {
+					return err
+				}
 			}
 		}
-		fmt.Fprintln(cmd.OutOrStdout(), "")
+		if _, err := fmt.Fprintln(cmd.OutOrStdout(), ""); err != nil {
+			return err
+		}
 	}
 	if !dryRun {
-		fmt.Fprintf(cmd.OutOrStdout(), "output: %s\n", outDir)
+		if _, err := fmt.Fprintf(cmd.OutOrStdout(), "output: %s\n", outDir); err != nil {
+			return err
+		}
 	}
 	return nil
 }

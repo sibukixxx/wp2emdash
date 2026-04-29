@@ -71,7 +71,9 @@ func grepCount(root string, needles ...string) int {
 		if err != nil {
 			return nil
 		}
-		defer f.Close()
+		defer func() {
+			_ = f.Close()
+		}()
 		s := bufio.NewScanner(f)
 		s.Buffer(make([]byte, 64*1024), 1024*1024)
 		for s.Scan() {
@@ -103,7 +105,9 @@ func countLinesMatching(path string, needles []string) int {
 	if err != nil {
 		return 0
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 	count := 0
 	s := bufio.NewScanner(f)
 	for s.Scan() {
