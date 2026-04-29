@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/rokubunnoni-inc/wp2emdash/internal/walk"
 )
 
 // dirSizeAndCount returns the total byte size and file count under root.
@@ -14,13 +16,7 @@ import (
 func dirSizeAndCount(root string) (int64, int) {
 	var size int64
 	var count int
-	_ = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return nil
-		}
-		if d.IsDir() {
-			return nil
-		}
+	_ = walk.Files(root, func(_ string, d fs.DirEntry) error {
 		info, err := d.Info()
 		if err != nil {
 			return nil
@@ -34,13 +30,7 @@ func dirSizeAndCount(root string) (int64, int) {
 
 func countFilesByExt(root, ext string) int {
 	count := 0
-	_ = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return nil
-		}
-		if d.IsDir() {
-			return nil
-		}
+	_ = walk.Files(root, func(_ string, d fs.DirEntry) error {
 		if strings.EqualFold(filepath.Ext(d.Name()), ext) {
 			count++
 		}
@@ -57,13 +47,7 @@ func grepCount(root string, needles ...string) int {
 		return 0
 	}
 	total := 0
-	_ = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return nil
-		}
-		if d.IsDir() {
-			return nil
-		}
+	_ = walk.Files(root, func(path string, _ fs.DirEntry) error {
 		if !looksLikeText(path) {
 			return nil
 		}
@@ -71,9 +55,7 @@ func grepCount(root string, needles ...string) int {
 		if err != nil {
 			return nil
 		}
-		defer func() {
-			_ = f.Close()
-		}()
+		defer func() { _ = f.Close() }()
 		s := bufio.NewScanner(f)
 		s.Buffer(make([]byte, 64*1024), 1024*1024)
 		for s.Scan() {

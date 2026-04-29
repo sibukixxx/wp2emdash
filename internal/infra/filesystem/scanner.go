@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/rokubunnoni-inc/wp2emdash/internal/domain/media"
+	"github.com/rokubunnoni-inc/wp2emdash/internal/walk"
 )
 
 // ScanOptions controls scan behavior.
@@ -36,13 +37,7 @@ func Scan(dir string, opt ScanOptions) (media.Manifest, error) {
 		Extensions: map[string]int{},
 	}
 
-	walkErr := filepath.WalkDir(abs, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return nil
-		}
-		if d.IsDir() {
-			return nil
-		}
+	walkErr := walk.Files(abs, func(path string, d fs.DirEntry) error {
 		info, ierr := d.Info()
 		if ierr != nil {
 			return nil
