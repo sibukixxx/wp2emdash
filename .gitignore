@@ -1,0 +1,17 @@
+# Local build artifacts
+bin/
+dist/
+
+# Default report output dir (overridable via --out)
+wp2emdash-output/
+
+# Coverage / profiling
+coverage.out
+*.test
+*.prof
+
+# OS / editor
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea/
