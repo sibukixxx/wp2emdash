@@ -2,8 +2,9 @@ package usecase
 
 import (
 	"fmt"
+	"path/filepath"
 
-	"github.com/rokubunnoni-inc/wp2emdash/internal/usecase/reporting"
+	"github.com/sibukixxx/wp2emdash/internal/usecase/reporting"
 )
 
 func LoadReportBundle(path string) (reporting.Bundle, error) {
@@ -15,7 +16,7 @@ func LoadReportBundle(path string) (reporting.Bundle, error) {
 }
 
 func WriteReport(outDir string, bundle reporting.Bundle) error {
-	if err := reporting.WriteAll(outDir, bundle); err != nil {
+	if err := reporting.WriteMarkdown(filepath.Join(outDir, "risk-report.md"), bundle); err != nil {
 		return fmt.Errorf("write report: %w", err)
 	}
 	return nil

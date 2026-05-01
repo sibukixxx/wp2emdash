@@ -10,19 +10,21 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/rokubunnoni-inc/wp2emdash/internal/domain/audit"
-	"github.com/rokubunnoni-inc/wp2emdash/internal/domain/score"
+	"github.com/sibukixxx/wp2emdash/internal/domain/audit"
+	"github.com/sibukixxx/wp2emdash/internal/domain/score"
+	"github.com/sibukixxx/wp2emdash/internal/domain/source"
 )
 
 // Bundle is the umbrella struct written to summary.json. Keeping this in one
 // type means downstream tools can consume a single JSON document instead of
 // joining several files together.
 type Bundle struct {
-	GeneratedAt string       `json:"generated_at"`
-	Tool        string       `json:"tool"`
-	Version     string       `json:"version"`
-	Audit       audit.Audit  `json:"audit"`
-	Score       score.Result `json:"score"`
+	GeneratedAt string           `json:"generated_at"`
+	Tool        string           `json:"tool"`
+	Version     string           `json:"version"`
+	Audit       audit.Audit      `json:"audit"`
+	Score       score.Result     `json:"score"`
+	Warnings    []source.Warning `json:"warnings,omitempty"`
 }
 
 // WriteAll writes summary.json + risk-report.md to outDir.
@@ -33,7 +35,7 @@ func WriteAll(outDir string, b Bundle) error {
 	if err := writeJSON(filepath.Join(outDir, "summary.json"), b); err != nil {
 		return err
 	}
-	if err := writeMarkdown(filepath.Join(outDir, "risk-report.md"), b); err != nil {
+	if err := WriteMarkdown(filepath.Join(outDir, "risk-report.md"), b); err != nil {
 		return err
 	}
 	return nil
@@ -68,7 +70,8 @@ func writeJSON(path string, v any) error {
 	return enc.Encode(v)
 }
 
-func writeMarkdown(path string, b Bundle) error {
+// WriteMarkdown writes the human-facing report to path.
+func WriteMarkdown(path string, b Bundle) error {
 	f, err := os.Create(path)
 	if err != nil {
 		return err
@@ -101,6 +104,9 @@ func RenderMarkdown(w io.Writer, b Bundle) error {
 	wln("- Active theme: %s", a.Theme.ActiveTheme)
 	wln("- **Risk score: %d (%s)**", s.Score, s.Level)
 	wln("- Rough estimate: %s", s.Estimate)
+	if len(b.Warnings) > 0 {
+		wln("- Audit warnings: %d", len(b.Warnings))
+	}
 	wln("")
 	wln("## Content")
 	wln("")
@@ -165,6 +171,14 @@ func RenderMarkdown(w io.Writer, b Bundle) error {
 		}
 	}
 	wln("")
+	if len(b.Warnings) > 0 {
+		wln("## Audit warnings")
+		wln("")
+		for _, warning := range b.Warnings {
+			wln("- `%s`: %s", warning.Code, warning.Message)
+		}
+		wln("")
+	}
 	wln("## Recommended next actions")
 	wln("")
 	wln("1. Decide on migration scope and choose the matching `wp2emdash preset`.")

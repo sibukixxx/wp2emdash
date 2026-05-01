@@ -1,0 +1,29 @@
+{
+  "bands": [
+    {
+      "max_score": 20,
+      "level": "Simple",
+      "estimate": "5万〜20万円"
+    },
+    {
+      "max_score": 50,
+      "level": "Standard",
+      "estimate": "20万〜60万円"
+    },
+    {
+      "max_score": 90,
+      "level": "Complex",
+      "estimate": "60万〜150万円"
+    },
+    {
+      "max_score": 130,
+      "level": "High Risk",
+      "estimate": "150万〜300万円"
+    },
+    {
+      "max_score": -1,
+      "level": "Rebuild Project",
+      "estimate": "300万円〜 / 個別見積り"
+    }
+  ]
+}
