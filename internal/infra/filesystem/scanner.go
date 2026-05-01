@@ -14,8 +14,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/rokubunnoni-inc/wp2emdash/internal/domain/media"
-	"github.com/rokubunnoni-inc/wp2emdash/internal/walk"
+	"github.com/sibukixxx/wp2emdash/internal/domain/media"
+	"github.com/sibukixxx/wp2emdash/internal/walk"
 )
 
 // ScanOptions controls scan behavior.

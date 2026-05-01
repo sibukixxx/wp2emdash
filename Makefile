@@ -11,7 +11,7 @@ GO_FILES := $(shell find . -type f -name '*.go' -not -path './bin/*' | sort)
 GOLANGCI_LINT ?= golangci-lint
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
-LDFLAGS := -X github.com/rokubunnoni-inc/wp2emdash/internal/cli.Version=$(VERSION)
+LDFLAGS := -X github.com/sibukixxx/wp2emdash/internal/cli.Version=$(VERSION)
 
 .PHONY: help build test test-e2e test-all vet lint golangci golangci-fix fmt fix run clean install dist
 

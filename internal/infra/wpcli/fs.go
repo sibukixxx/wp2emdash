@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/rokubunnoni-inc/wp2emdash/internal/walk"
+	"github.com/sibukixxx/wp2emdash/internal/walk"
 )
 
 // dirSizeAndCount returns the total byte size and file count under root.

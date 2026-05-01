@@ -1,4 +1,4 @@
-module github.com/rokubunnoni-inc/wp2emdash
+module github.com/sibukixxx/wp2emdash
 
 go 1.26.2
 

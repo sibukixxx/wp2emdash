@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/rokubunnoni-inc/wp2emdash/internal/cli/output"
+	"github.com/sibukixxx/wp2emdash/internal/cli/output"
 )
 
 func TestJSON(t *testing.T) {

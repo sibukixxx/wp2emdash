@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/rokubunnoni-inc/wp2emdash/internal/walk"
+	"github.com/sibukixxx/wp2emdash/internal/walk"
 )
 
 func TestFiles(t *testing.T) {

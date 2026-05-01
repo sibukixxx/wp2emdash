@@ -3,8 +3,8 @@ package cli
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/rokubunnoni-inc/wp2emdash/internal/usecase"
-	"github.com/rokubunnoni-inc/wp2emdash/internal/usecase/reporting"
+	"github.com/sibukixxx/wp2emdash/internal/usecase"
+	"github.com/sibukixxx/wp2emdash/internal/usecase/reporting"
 )
 
 func newReportCmd() *cobra.Command {

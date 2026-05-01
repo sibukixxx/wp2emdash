@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/rokubunnoni-inc/wp2emdash/internal/cli"
+	"github.com/sibukixxx/wp2emdash/internal/cli"
 )
 
 func main() {
