@@ -21,6 +21,7 @@ type CLI struct {
 type Result struct {
 	Stdout string
 	Stderr string
+	Err    error
 }
 
 func NewCLI(t *testing.T) *CLI {
@@ -35,6 +36,7 @@ func NewCLI(t *testing.T) *CLI {
 
 	writeStubTool(t, toolBinDir, "wp", fakeWP)
 	writeStubTool(t, toolBinDir, "php", fakePHP)
+	writeStubTool(t, toolBinDir, "rclone", "#!/bin/sh\nprintf '%s' \"$*\"\n")
 	writeStubTool(t, toolBinDir, "wrangler", "#!/bin/sh\nexit 0\n")
 	writeStubTool(t, toolBinDir, "git", "#!/bin/sh\nexit 0\n")
 	writeStubTool(t, toolBinDir, "ssh", fakeSSH)
@@ -64,21 +66,31 @@ func (c *CLI) ReplaceTool(t *testing.T, name, body string) {
 func (c *CLI) Run(t *testing.T, args ...string) Result {
 	t.Helper()
 
+	res := c.RunWithEnv(t, nil, args...)
+	if res.Err != nil {
+		t.Fatalf("run %s: %v\nstdout:\n%s\nstderr:\n%s", strings.Join(args, " "), res.Err, res.Stdout, res.Stderr)
+	}
+	return res
+}
+
+func (c *CLI) RunWithEnv(t *testing.T, extraEnv []string, args ...string) Result {
+	t.Helper()
+
 	cmd := exec.Command(c.BinaryPath, args...)
 	cmd.Dir = c.RepoRoot
 	cmd.Env = append(os.Environ(), "PATH="+c.ToolBinDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	cmd.Env = append(cmd.Env, extraEnv...)
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		t.Fatalf("run %s: %v\nstdout:\n%s\nstderr:\n%s", strings.Join(args, " "), err, stdout.String(), stderr.String())
-	}
+	err := cmd.Run()
 
 	return Result{
 		Stdout: stdout.String(),
 		Stderr: stderr.String(),
+		Err:    err,
 	}
 }
 
@@ -177,6 +189,9 @@ case "$*" in
   "taxonomy list --field=name")
     printf "category\npost_tag\ncampaign\n"
     ;;
+  "post list --post_status=publish --post_type=post,page --fields=ID,post_type,post_name,post_title,url --format=json")
+    printf '[{"ID":1,"post_type":"post","post_name":"hello","post_title":"Hello","url":"https://example.test/hello/"},{"ID":2,"post_type":"page","post_name":"about","post_title":"About","url":"https://example.test/about/"}]'
+    ;;
   *)
     case "$*" in
       *"SELECT COUNT(*) FROM wp_posts WHERE post_content LIKE '%wp-content/uploads%'"*)
@@ -193,6 +208,20 @@ case "$*" in
         ;;
       *"SELECT COUNT(*) FROM wp_posts WHERE post_content REGEXP '\\[[a-zA-Z0-9_-]+'"*)
         printf "5"
+        ;;
+      *"SELECT post_id, meta_key, meta_value FROM wp_postmeta WHERE post_id IN"*)
+        printf '1\t_yoast_wpseo_title\tHello SEO\n'
+        printf '1\t_yoast_wpseo_metadesc\tThe hello description\n'
+        printf '1\t_yoast_wpseo_meta-robots-noindex\t1\n'
+        printf '2\trank_math_title\tAbout Page\n'
+        printf '2\trank_math_description\tAbout description\n'
+        ;;
+      *"FROM wp_redirection_items WHERE status='enabled'"*)
+        printf '/old\t/new\t301\t0\n'
+        printf '^/legacy/(.*)$\t/new/$1\t302\t1\n'
+        ;;
+      *"FROM wp_posts p LEFT JOIN wp_postmeta pm"*)
+        printf '99\t/srm-from\t/srm-to\t301\n'
         ;;
       *)
         exit 1

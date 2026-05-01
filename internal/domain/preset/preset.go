@@ -60,7 +60,9 @@ func All() []Preset {
 				}},
 				{Name: "plan", Steps: []Step{
 					{Kind: "report", Summary: "summary.json + risk-report.md"},
-					{Kind: "todo", Summary: "TODO: db plan / env generate / deploy staging（v0.2 以降）"},
+					{Kind: "db-plan", Summary: "summary.json から DB 移行計画を生成"},
+					{Kind: "secrets-check", Summary: "デプロイ前に必要な secrets の存在を確認"},
+					{Kind: "todo", Summary: "TODO: env generate / deploy staging（v0.2 以降）"},
 				}},
 			},
 		},
@@ -75,6 +77,8 @@ func All() []Preset {
 				}},
 				{Name: "plan", Steps: []Step{
 					{Kind: "report", Summary: "summary.json + risk-report.md"},
+					{Kind: "db-plan", Summary: "summary.json から DB/SEO metadata の移行計画を生成"},
+					{Kind: "secrets-check", Summary: "Cloudflare/agent secrets の存在を確認"},
 					{Kind: "todo", Summary: "TODO: URL map / Cloudflare Rules 計画（v0.4）"},
 				}},
 			},
@@ -86,6 +90,7 @@ func All() []Preset {
 				{Name: "audit", Steps: []Step{
 					{Kind: "audit", Summary: "WP-CLI 全観点"},
 					{Kind: "media-scan-hash", Summary: "uploads 全量 manifest + SHA-256"},
+					{Kind: "secrets-check", Summary: "R2 / Cloudflare secrets の存在を確認"},
 					{Kind: "todo", Summary: "TODO: media sync wrapper / route generate（v0.3）"},
 				}},
 			},
@@ -100,6 +105,8 @@ func All() []Preset {
 				}},
 				{Name: "plan", Steps: []Step{
 					{Kind: "report", Summary: "再構築計画レポート（v0.5 で詳細化）"},
+					{Kind: "db-plan", Summary: "summary.json から DB 移行計画を生成"},
+					{Kind: "secrets-check", Summary: "再構築用の secrets の存在を確認"},
 				}},
 			},
 		},

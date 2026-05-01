@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/sibukixxx/wp2emdash/internal/domain/audit"
+	"github.com/sibukixxx/wp2emdash/internal/domain/seo"
 )
 
 // Warning captures a best-effort audit probe failure that did not abort the
@@ -27,4 +28,16 @@ type Auditor interface {
 // partial-failure diagnostics alongside a successful Audit result.
 type WarningReporter interface {
 	Warnings() []Warning
+}
+
+// MetaExtractor extracts per-post SEO metadata from a migration source.
+// Used by `wp2emdash seo extract-meta`.
+type MetaExtractor interface {
+	ExtractMeta(ctx context.Context) ([]seo.MetaItem, error)
+}
+
+// RedirectExtractor extracts redirect rules (htaccess + plugin tables) from
+// a migration source. Used by `wp2emdash seo extract-redirects`.
+type RedirectExtractor interface {
+	ExtractRedirects(ctx context.Context) ([]seo.RedirectRule, error)
 }

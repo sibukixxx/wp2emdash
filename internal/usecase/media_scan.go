@@ -34,6 +34,22 @@ type MediaScanResult struct {
 }
 
 func RunMediaScan(ctx context.Context, params MediaScanParams) (MediaScanResult, error) {
+	manifest, err := scanMediaSource(ctx, params)
+	if err != nil {
+		return MediaScanResult{}, err
+	}
+
+	dest := params.ManifestPath
+	if dest == "" {
+		dest = filepath.Join(params.OutDir, "media-manifest.json")
+	}
+	if err := writeMediaManifest(dest, manifest); err != nil {
+		return MediaScanResult{}, fmt.Errorf("write media manifest: %w", err)
+	}
+	return MediaScanResult{Manifest: manifest, Path: dest}, nil
+}
+
+func scanMediaSource(ctx context.Context, params MediaScanParams) (media.Manifest, error) {
 	var (
 		manifest media.Manifest
 		err      error
@@ -41,7 +57,7 @@ func RunMediaScan(ctx context.Context, params MediaScanParams) (MediaScanResult,
 	switch {
 	case params.AgentURL != "":
 		if params.SSHTarget != "" {
-			return MediaScanResult{}, fmt.Errorf("agent-url and ssh cannot be used together")
+			return media.Manifest{}, fmt.Errorf("agent-url and ssh cannot be used together")
 		}
 		manifest, err = agenthttp.ScanMedia(ctx, params.AgentURL, params.AgentToken, params.AgentTimeout, agenthttp.MediaScanParams{
 			Dir:           params.Dir,
@@ -68,17 +84,9 @@ func RunMediaScan(ctx context.Context, params MediaScanParams) (MediaScanResult,
 		})
 	}
 	if err != nil {
-		return MediaScanResult{}, err
+		return media.Manifest{}, err
 	}
-
-	dest := params.ManifestPath
-	if dest == "" {
-		dest = filepath.Join(params.OutDir, "media-manifest.json")
-	}
-	if err := writeMediaManifest(dest, manifest); err != nil {
-		return MediaScanResult{}, fmt.Errorf("write media manifest: %w", err)
-	}
-	return MediaScanResult{Manifest: manifest, Path: dest}, nil
+	return manifest, nil
 }
 
 func writeMediaManifest(path string, manifest media.Manifest) error {

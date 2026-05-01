@@ -79,6 +79,7 @@ func runPreset(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
 	agentURL := mustString(cmd, "agent-url")
 	params := usecase.PresetParams{
+		PresetName:    string(p.Name),
 		WPRoot:        wpRoot,
 		OutDir:        outDir,
 		Version:       Version,

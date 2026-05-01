@@ -34,9 +34,12 @@ commands require an explicit confirmation flag.`,
 
 	root.AddCommand(newDoctorCmd())
 	root.AddCommand(newAuditCmd())
+	root.AddCommand(newDBCmd())
 	root.AddCommand(newMediaCmd())
 	root.AddCommand(newReportCmd())
 	root.AddCommand(newRunCmd())
+	root.AddCommand(newSecretsCmd())
+	root.AddCommand(newSEOCmd())
 
 	return root
 }

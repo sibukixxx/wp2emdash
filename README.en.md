@@ -5,11 +5,16 @@ English documentation for `wp2emdash`. Japanese documentation lives in [README.m
 `wp2emdash` is a Go CLI that breaks a WordPress → EmDash migration into small, phase-oriented commands. It follows a Unix-style approach: wrap existing tools such as `wp-cli`, `wrangler`, and `rclone` thinly, then emit JSON or Markdown that can be piped into other tooling.
 
 ```
-wp2emdash audit          -> measure migration complexity and score risk
-wp2emdash media scan     -> build a JSON manifest of wp-content/uploads
-wp2emdash report         -> regenerate risk-report.md from summary.json
-wp2emdash run --preset   -> execute a migration phase preset
-wp2emdash doctor         -> check required external tools
+wp2emdash audit                  -> measure migration complexity and score risk
+wp2emdash db plan                -> generate a DB migration plan from summary.json
+wp2emdash media scan             -> build a JSON manifest of wp-content/uploads
+wp2emdash report                 -> regenerate risk-report.md from summary.json
+wp2emdash run --preset           -> execute a migration phase preset
+wp2emdash secrets check          -> verify required secrets for a given preset/profile
+wp2emdash seo extract-meta       -> dump per-post SEO metadata as JSON
+wp2emdash seo extract-redirects  -> dump .htaccess + plugin redirects as JSON
+wp2emdash seo url-map            -> diff two URL maps to find missing/added URLs
+wp2emdash doctor                 -> check required external tools
 ```
 
 ## Why Small Commands
@@ -72,7 +77,16 @@ wp2emdash media scan \
 wp2emdash run --preset minimal --wp-root /var/www/html --dry-run
 wp2emdash run --preset minimal --wp-root /var/www/html --apply
 
-# 8. Run preset minimal via split agent endpoints
+# 8. Generate a DB migration plan from summary.json
+wp2emdash db plan \
+  --from wp2emdash-output/summary.json \
+  --preset small-production
+
+# 9. Check whether the current environment already has the required secrets
+wp2emdash secrets check --profile small-production
+wp2emdash secrets check --profile media-heavy --json
+
+# 10. Run preset minimal via split agent endpoints
 wp2emdash run --preset minimal \
   --agent-audit-url https://example.com/wp-json/wp2emdash/v1/audit \
   --agent-media-url https://example.com/wp-json/wp2emdash/v1/media-scan \
@@ -80,7 +94,7 @@ wp2emdash run --preset minimal \
   --wp-root /var/www/html \
   --apply
 
-# 9. Use the same public risk-band policy during preset execution
+# 11. Use the same public risk-band policy during preset execution
 wp2emdash run --preset minimal \
   --wp-root /var/www/html \
   --risk-bands ./config/custom-risk-bands.json \
@@ -93,15 +107,36 @@ Artifacts are written to `wp2emdash-output/` by default:
 - `risk-report.md`
 - `media-manifest.json`
 
-## v0.1 Commands
+## v0.1 / v0.2 / v0.4 Commands
 
 | Command | Purpose | Main Flags |
 | --- | --- | --- |
 | `doctor` | Check required tools such as `wp`, `wrangler`, and `git` | `--json` |
 | `audit` | Measure 14 migration signals via local WP-CLI, SSH, or HTTP agent | `--wp-root` `--write` `--json` `--ssh` `--agent-url` `--risk-bands` |
+| `db plan` | Generate a JSON/Markdown DB migration plan from `summary.json` | `--from` `--preset` `--write` `--json` |
 | `media scan` | Build a JSON manifest via local path, SSH, or HTTP agent | `--dir` `--hash` `--max-files` `--histogram-only` `--ssh` `--agent-url` |
 | `report` | Regenerate `risk-report.md` from `summary.json` | `--from` `--stdout` |
 | `run --preset` | Execute one of the predefined migration presets | `--preset` `--wp-root` `--dry-run` `--apply` `--ssh` `--agent-audit-url` `--agent-media-url` `--risk-bands` |
+| `secrets check` | Verify whether required secret env vars are already present | `--profile` `--json` |
+| `seo extract-meta` | Dump per-post SEO metadata (Yoast / Rank Math / AIOSEO merged) | `--wp-root` `--write` `--ssh` |
+| `seo extract-redirects` | Extract redirects from `.htaccess` and Redirection / SRM plugins | `--wp-root` `--write` `--ssh` |
+| `seo url-map` | Diff two URL maps (matched / missing / new) | `--old` `--new` `--write` |
+
+### Added in v0.2
+
+- `db plan`
+  Reads `summary.json` and emits a plan that classifies WordPress tables and metadata as `export`, `review`, `transform`, or `skip`. It does not dump or modify the database.
+- `secrets check`
+  Checks existing environment variables only. It never generates or overwrites `.env`. Supported profiles are `small-production`, `seo-production`, `media-heavy`, `custom-rebuild`, and `agent`.
+
+### Added in v0.4
+
+- `seo extract-meta`
+  Lists every published post / page via `wp post list`, then merges Yoast, Rank Math, and AIOSEO post meta keys into a single `seo-meta.json`. Plugin precedence is **Yoast > Rank Math > AIOSEO**, with the contributing plugin recorded in the `source` field.
+- `seo extract-redirects`
+  Combines three redirect sources into a single `seo-redirects.json`: `.htaccess` (`Redirect`, `RedirectMatch`, `RewriteRule [R=...]`), Redirection plugin (`wp_redirection_items`), and Safe Redirect Manager (`post_type=redirect_rule`).
+- `seo url-map`
+  Diffs two URL maps and reports `matched`, `only_in_old` (likely needs an explicit redirect), and `only_in_new`. Inputs may be JSON or plain text (one URL per line). URLs are normalised before comparison (scheme, trailing slash, fragment); path case is preserved.
 
 The core scoring rubric is additive. Public-facing level labels and estimate bands are replaceable through `--risk-bands path/to/custom.json`. The table below is only the example shipped in the default bundled policy:
 
@@ -125,7 +160,7 @@ The core scoring rubric is additive. Public-facing level labels and estimate ban
 | `media-heavy` | Media-heavy migration with large uploads footprint |
 | `custom-rebuild` | Rebuild-heavy migration involving theme, plugins, mu-plugins, and integrations |
 
-As of v0.1, `minimal` is the fully implemented preset. The others are partially implemented and still contain placeholder `todo` steps.
+`minimal` is still the only fully implemented preset. As of v0.2, `small-production`, `seo-production`, `media-heavy`, and `custom-rebuild` now include `db plan` and `secrets check`, while later steps such as `env generate`, deploy, and media sync/verify remain placeholder `todo` steps.
 
 ## Architecture
 
@@ -286,14 +321,14 @@ For `run --preset`, the preferred form is:
 
 ## Roadmap
 
-| Version | Planned Scope |
-| --- | --- |
-| v0.1 | doctor / audit / media scan / report / run --preset minimal |
-| v0.2 | `env generate`, `secrets check`, `db plan` |
-| v0.3 | `media sync`, `media verify`, legacy uploads route worker scaffolding |
-| v0.4 | `seo extract-meta`, `seo extract-redirects`, URL map comparison |
-| v0.5 | `theme analyze`, `plugins analyze`, `mu-plugins analyze`, rebuild planning report |
-| v1.0 | Full implementation of all five presets plus GitHub Actions scaffolding |
+| Version | Planned Scope | Status |
+| --- | --- | --- |
+| v0.1 | doctor / audit / media scan / report / run --preset minimal | done |
+| v0.2 | `env generate`, `secrets check`, `db plan` | `secrets check` / `db plan` done; `env generate` pending |
+| v0.3 | `media sync`, `media verify`, legacy uploads route worker scaffolding | `media sync` / `media verify` done; worker scaffolding pending |
+| **v0.4 (current)** | `seo extract-meta`, `seo extract-redirects`, URL map comparison | done |
+| v0.5 | `theme analyze`, `plugins analyze`, `mu-plugins analyze`, rebuild planning report | not started |
+| v1.0 | Full implementation of all five presets plus GitHub Actions scaffolding | not started |
 
 ## Legacy Bash
 

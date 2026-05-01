@@ -2,7 +2,9 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/sibukixxx/wp2emdash/internal/domain/preset"
@@ -11,6 +13,7 @@ import (
 
 // PresetParams holds the runtime configuration for preset execution.
 type PresetParams struct {
+	PresetName    string
 	WPRoot        string
 	OutDir        string
 	Version       string
@@ -106,6 +109,23 @@ func buildRegistry() *step.Registry {
 	reg.Register("report", func(_ context.Context, _ preset.Step, _ step.Params) (step.Result, error) {
 		return step.Result{}, nil
 	})
+	reg.Register("db-plan", func(_ context.Context, _ preset.Step, p step.Params) (step.Result, error) {
+		_, err := RunDBPlan(DBPlanParams{
+			From:   path.Join(p.OutDir, "summary.json"),
+			OutDir: p.OutDir,
+			Preset: p.PresetName,
+			Write:  true,
+		})
+		return step.Result{}, err
+	})
+	reg.Register("secrets-check", func(ctx context.Context, s preset.Step, p step.Params) (step.Result, error) {
+		profile := inferSecretsProfile(s, p)
+		rep := RunSecretsCheck(ctx, profile)
+		if !rep.OK {
+			return step.Result{}, fmt.Errorf("required secrets missing for profile %s", profile)
+		}
+		return step.Result{}, nil
+	})
 	reg.Register("todo", func(_ context.Context, _ preset.Step, _ step.Params) (step.Result, error) {
 		return step.Result{}, nil
 	})
@@ -113,11 +133,34 @@ func buildRegistry() *step.Registry {
 	return reg
 }
 
+func inferSecretsProfile(s preset.Step, p step.Params) string {
+	switch p.PresetName {
+	case string(preset.SEOProduction):
+		return "seo-production"
+	case string(preset.MediaHeavy):
+		return "media-heavy"
+	case string(preset.CustomRebuild):
+		return "custom-rebuild"
+	}
+
+	switch {
+	case strings.Contains(s.Summary, "R2"):
+		return "media-heavy"
+	case strings.Contains(s.Summary, "再構築"):
+		return "custom-rebuild"
+	case strings.Contains(s.Summary, "Cloudflare/agent"):
+		return "seo-production"
+	default:
+		return "small-production"
+	}
+}
+
 // RunPresetStep executes a single preset step using the default step registry.
 // New step kinds can be registered into a custom Registry without modifying
 // this function; see package step for the registration API.
 func RunPresetStep(ctx context.Context, s preset.Step, params PresetParams) (step.Result, error) {
 	return defaultRegistry.Execute(ctx, s, step.Params{
+		PresetName:    params.PresetName,
 		WPRoot:        params.WPRoot,
 		OutDir:        params.OutDir,
 		Version:       params.Version,

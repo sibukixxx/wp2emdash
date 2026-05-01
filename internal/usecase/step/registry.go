@@ -13,6 +13,7 @@ import (
 
 // Params carries the runtime parameters shared across all step handlers.
 type Params struct {
+	PresetName    string
 	WPRoot        string
 	OutDir        string
 	Version       string

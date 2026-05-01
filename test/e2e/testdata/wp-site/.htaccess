@@ -1,0 +1,8 @@
+# BEGIN WordPress
+
+Redirect 301 /retired-post /new-post
+RedirectMatch 301 ^/legacy/(.*)$ /new/$1
+RewriteRule ^old-page$ /fresh-page [R=301,L]
+RewriteRule ^pure-rewrite$ /still-here [L]
+
+# END WordPress
