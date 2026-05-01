@@ -34,8 +34,10 @@ func NewCLI(t *testing.T) *CLI {
 	}
 
 	writeStubTool(t, toolBinDir, "wp", fakeWP)
+	writeStubTool(t, toolBinDir, "php", fakePHP)
 	writeStubTool(t, toolBinDir, "wrangler", "#!/bin/sh\nexit 0\n")
 	writeStubTool(t, toolBinDir, "git", "#!/bin/sh\nexit 0\n")
+	writeStubTool(t, toolBinDir, "ssh", fakeSSH)
 
 	binaryPath := filepath.Join(t.TempDir(), "wp2emdash")
 	build := exec.Command("go", "build", "-o", binaryPath, "./cmd/wp2emdash")
@@ -52,6 +54,11 @@ func NewCLI(t *testing.T) *CLI {
 		FixtureDir: fixtureDir,
 		ToolBinDir: toolBinDir,
 	}
+}
+
+func (c *CLI) ReplaceTool(t *testing.T, name, body string) {
+	t.Helper()
+	writeStubTool(t, c.ToolBinDir, name, body)
 }
 
 func (c *CLI) Run(t *testing.T, args ...string) Result {
@@ -191,6 +198,55 @@ case "$*" in
         exit 1
         ;;
     esac
+    ;;
+esac
+`
+
+const fakeSSH = `#!/bin/sh
+set -eu
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -o|-p|-i)
+      shift 2
+      ;;
+    -*)
+      shift
+      ;;
+    *)
+      shift
+      break
+      ;;
+  esac
+done
+
+cmd="$*"
+exec sh -lc "$cmd"
+`
+
+const fakePHP = `#!/bin/sh
+set -eu
+
+if [ "${1-}" != "-r" ]; then
+  exit 1
+fi
+
+code="${2-}"
+shift 2
+if [ "${1-}" = "--" ]; then
+  shift
+fi
+
+case "$code" in
+  *"'base_dir' =>"* )
+    dir="${1-}"
+    printf '{"base_dir":"%s","total_files":1,"total_bytes":12,"extensions":{"txt":1},"files":[{"path":"2024/01/hello.txt","size":12,"ext":"txt","sha256":"","mime":"text/plain"}]}' "$dir"
+    ;;
+  *"'exists' =>"* )
+    printf '{"exists":true,"size":12,"count":1}'
+    ;;
+  * )
+    printf '1'
     ;;
 esac
 `

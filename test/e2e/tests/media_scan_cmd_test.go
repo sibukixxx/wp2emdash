@@ -4,8 +4,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/rokubunnoni-inc/wp2emdash/internal/domain/media"
-	"github.com/rokubunnoni-inc/wp2emdash/test/e2e"
+	"github.com/sibukixxx/wp2emdash/internal/domain/media"
+	"github.com/sibukixxx/wp2emdash/test/e2e"
 )
 
 func TestMediaScanCommand_WritesManifest(t *testing.T) {
