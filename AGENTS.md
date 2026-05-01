@@ -1,7 +1,7 @@
 # AGENTS.md
 
 このリポジトリで作業するエージェント（Claude Code / Codex / Cursor 等）向けの正典ガイド。
-人間向けの導入は [`README.md`](README.md)、設計原則の詳細は [`CONTRIBUTING.md`](CONTRIBUTING.md) を参照。
+人間向けの導入は [`README.md`](README.md)、英語版の概要は [`README.en.md`](README.en.md)、設計原則の詳細は [`CONTRIBUTING.md`](CONTRIBUTING.md) を参照。
 
 ## プロジェクト概要
 
@@ -9,7 +9,7 @@
 `wp-cli` / `wrangler` / `rclone` などを薄くラップし、JSON / Markdown を出力する小さなコマンド群として実装する。
 
 - 言語: Go 1.22+
-- モジュール名: `github.com/rokubunnoni-inc/wp2emdash`
+- モジュール名: `github.com/sibukixxx/wp2emdash`
 - CLI フレームワーク: `github.com/spf13/cobra`
 - バイナリ: `bin/wp2emdash`（`make build` で生成）
 

@@ -1,5 +1,7 @@
 # Contributing to wp2emdash
 
+English project overview: [README.en.md](README.en.md)
+
 wp2emdash は **EmDash 移行を Unix 思想で扱う orchestrator** です。設計の軸を外さない PR を歓迎します。
 
 ## 設計原則
