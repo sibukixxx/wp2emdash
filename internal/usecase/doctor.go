@@ -2,7 +2,8 @@ package usecase
 
 import (
 	"context"
-	"os/exec"
+
+	"github.com/sibukixxx/wp2emdash/internal/shell"
 )
 
 type DoctorCheck struct {
@@ -20,15 +21,19 @@ type DoctorReport struct {
 }
 
 func RunDoctor(ctx context.Context) DoctorReport {
+	return RunDoctorWithRunner(ctx, shell.Runner{})
+}
+
+func RunDoctorWithRunner(ctx context.Context, runner shell.Runner) DoctorReport {
 	required := []string{"wp", "wrangler", "git"}
 	optional := []string{"php", "node", "pnpm", "rclone", "aws", "jq"}
 
 	report := DoctorReport{OK: true}
 	for _, tool := range required {
-		report.Checks = append(report.Checks, checkTool(ctx, tool, true))
+		report.Checks = append(report.Checks, checkTool(ctx, runner, tool, true))
 	}
 	for _, tool := range optional {
-		report.Checks = append(report.Checks, checkTool(ctx, tool, false))
+		report.Checks = append(report.Checks, checkTool(ctx, runner, tool, false))
 	}
 	for _, c := range report.Checks {
 		if c.Required && !c.Found {
@@ -38,9 +43,9 @@ func RunDoctor(ctx context.Context) DoctorReport {
 	return report
 }
 
-func checkTool(_ context.Context, tool string, required bool) DoctorCheck {
+func checkTool(_ context.Context, runner shell.Runner, tool string, required bool) DoctorCheck {
 	c := DoctorCheck{Name: tool, Required: required}
-	if path, err := exec.LookPath(tool); err == nil {
+	if path, err := runner.LookPath(tool); err == nil {
 		c.Found = true
 		c.Path = path
 		return c

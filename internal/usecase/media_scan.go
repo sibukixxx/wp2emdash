@@ -1,13 +1,16 @@
 package usecase
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
-	"github.com/rokubunnoni-inc/wp2emdash/internal/domain/media"
-	"github.com/rokubunnoni-inc/wp2emdash/internal/infra/filesystem"
+	"github.com/sibukixxx/wp2emdash/internal/domain/media"
+	"github.com/sibukixxx/wp2emdash/internal/infra/agenthttp"
+	"github.com/sibukixxx/wp2emdash/internal/infra/filesystem"
 )
 
 type MediaScanParams struct {
@@ -17,6 +20,12 @@ type MediaScanParams struct {
 	Hash          bool
 	MaxFiles      int
 	HistogramOnly bool
+	SSHTarget     string
+	SSHPort       int
+	SSHKey        string
+	AgentURL      string
+	AgentToken    string
+	AgentTimeout  time.Duration
 }
 
 type MediaScanResult struct {
@@ -25,11 +34,39 @@ type MediaScanResult struct {
 }
 
 func RunMediaScan(params MediaScanParams) (MediaScanResult, error) {
-	manifest, err := filesystem.Scan(params.Dir, filesystem.ScanOptions{
-		Hash:      params.Hash,
-		MaxFiles:  params.MaxFiles,
-		WithFiles: !params.HistogramOnly,
-	})
+	var (
+		manifest media.Manifest
+		err      error
+	)
+	switch {
+	case params.AgentURL != "":
+		if params.SSHTarget != "" {
+			return MediaScanResult{}, fmt.Errorf("agent-url and ssh cannot be used together")
+		}
+		manifest, err = agenthttp.ScanMedia(context.Background(), params.AgentURL, params.AgentToken, params.AgentTimeout, agenthttp.MediaScanParams{
+			Dir:           params.Dir,
+			Hash:          params.Hash,
+			MaxFiles:      params.MaxFiles,
+			HistogramOnly: params.HistogramOnly,
+		})
+	case params.SSHTarget != "":
+		manifest, err = filesystem.ScanRemote(filesystem.RemoteScanConfig{
+			Target: params.SSHTarget,
+			Port:   params.SSHPort,
+			Key:    params.SSHKey,
+			Dir:    params.Dir,
+		}, filesystem.ScanOptions{
+			Hash:      params.Hash,
+			MaxFiles:  params.MaxFiles,
+			WithFiles: !params.HistogramOnly,
+		})
+	default:
+		manifest, err = filesystem.Scan(params.Dir, filesystem.ScanOptions{
+			Hash:      params.Hash,
+			MaxFiles:  params.MaxFiles,
+			WithFiles: !params.HistogramOnly,
+		})
+	}
 	if err != nil {
 		return MediaScanResult{}, err
 	}
