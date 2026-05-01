@@ -1,10 +1,10 @@
-// Package score turns an audit struct into a risk score / level / cost band.
-// The rule table is intentionally simple (additive, hand-tuned weights) and
-// must stay in lock-step with scripts/audit/emdash-migration-audit.sh.
+// Package score turns an audit struct into a raw risk score plus reasons.
+// Business-facing labels and price hints are applied outside this package via
+// a policy file so the core can remain publication-friendly.
 package score
 
 import (
-	"github.com/rokubunnoni-inc/wp2emdash/internal/domain/audit"
+	"github.com/sibukixxx/wp2emdash/internal/domain/audit"
 )
 
 // Level groups the numeric score into the five sales-facing bands.
@@ -72,22 +72,5 @@ func Compute(a audit.Audit) Result {
 	add(10, "code.redirect.any", "コード内redirectあり", a.Customization.CodeRedirectLikeOccurrences > 0)
 	add(10, "theme.jquery.gt20", "jQuery/admin-ajax等の依存が多い", a.Theme.JQueryLikeOccurrences > 20)
 
-	res.Level, res.Estimate = LevelFor(res.Score)
 	return res
-}
-
-// LevelFor maps a raw score onto the public band + price hint.
-func LevelFor(score int) (Level, string) {
-	switch {
-	case score <= 20:
-		return LevelSimple, "5万〜20万円"
-	case score <= 50:
-		return LevelStandard, "20万〜60万円"
-	case score <= 90:
-		return LevelComplex, "60万〜150万円"
-	case score <= 130:
-		return LevelHighRisk, "150万〜300万円"
-	default:
-		return LevelRebuild, "300万円〜 / 個別見積り"
-	}
 }

@@ -3,7 +3,7 @@ package score
 import (
 	"testing"
 
-	"github.com/rokubunnoni-inc/wp2emdash/internal/domain/audit"
+	"github.com/sibukixxx/wp2emdash/internal/domain/audit"
 )
 
 func TestComputeReturnsSimpleForEmptyAudit(t *testing.T) {
@@ -11,8 +11,8 @@ func TestComputeReturnsSimpleForEmptyAudit(t *testing.T) {
 	if got.Score != 0 {
 		t.Fatalf("score: want 0, got %d", got.Score)
 	}
-	if got.Level != LevelSimple {
-		t.Fatalf("level: want %q, got %q", LevelSimple, got.Level)
+	if got.Level != "" {
+		t.Fatalf("level: want empty, got %q", got.Level)
 	}
 	if len(got.Reasons) != 0 {
 		t.Fatalf("reasons: want 0, got %d", len(got.Reasons))
@@ -34,31 +34,7 @@ func TestComputeAccumulatesSignals(t *testing.T) {
 	if got.Score != 100 {
 		t.Fatalf("score: want 100, got %d", got.Score)
 	}
-	if got.Level != LevelHighRisk {
-		t.Fatalf("level: want %q, got %q", LevelHighRisk, got.Level)
-	}
-}
-
-func TestLevelForBoundaries(t *testing.T) {
-	cases := []struct {
-		score int
-		want  Level
-	}{
-		{0, LevelSimple},
-		{20, LevelSimple},
-		{21, LevelStandard},
-		{50, LevelStandard},
-		{51, LevelComplex},
-		{90, LevelComplex},
-		{91, LevelHighRisk},
-		{130, LevelHighRisk},
-		{131, LevelRebuild},
-		{500, LevelRebuild},
-	}
-	for _, c := range cases {
-		got, _ := LevelFor(c.score)
-		if got != c.want {
-			t.Errorf("score=%d: want %q, got %q", c.score, c.want, got)
-		}
+	if got.Level != "" {
+		t.Fatalf("level: want empty, got %q", got.Level)
 	}
 }
