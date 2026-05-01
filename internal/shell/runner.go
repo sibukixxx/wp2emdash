@@ -7,7 +7,9 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -71,6 +73,36 @@ func (r Runner) Output(ctx context.Context, name string, args ...string) (string
 		return "", err
 	}
 	return strings.TrimRight(res.Stdout, "\n\r \t"), nil
+}
+
+// LookPath resolves name using the current PATH. It centralizes process lookup
+// so higher layers do not need to reach for os/exec directly.
+func (r Runner) LookPath(name string) (string, error) {
+	return shellLookPath(name, r.Env)
+}
+
+func shellLookPath(name string, env []string) (string, error) {
+	pathValue := os.Getenv("PATH")
+	for _, entry := range env {
+		if strings.HasPrefix(entry, "PATH=") {
+			pathValue = strings.TrimPrefix(entry, "PATH=")
+			break
+		}
+	}
+
+	if strings.ContainsRune(name, filepath.Separator) {
+		return exec.LookPath(name)
+	}
+	for _, dir := range filepath.SplitList(pathValue) {
+		if dir == "" {
+			dir = "."
+		}
+		candidate := filepath.Join(dir, name)
+		if info, err := os.Stat(candidate); err == nil && !info.IsDir() && info.Mode()&0o111 != 0 {
+			return candidate, nil
+		}
+	}
+	return "", &exec.Error{Name: name, Err: exec.ErrNotFound}
 }
 
 func formatCommand(name string, args []string) string {
