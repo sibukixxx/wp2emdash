@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -47,6 +48,9 @@ func NewAuditor(wpRoot string) (*Auditor, error) {
 func NewRemoteAuditor(cfg RemoteConfig) (*Auditor, error) {
 	if strings.TrimSpace(cfg.Target) == "" {
 		return nil, fmt.Errorf("ssh target is required")
+	}
+	if strings.HasPrefix(cfg.Target, "-") {
+		return nil, fmt.Errorf("invalid ssh target: %q (must not start with '-')", cfg.Target)
 	}
 	if strings.TrimSpace(cfg.WPRoot) == "" {
 		return nil, fmt.Errorf("wp_root is required")
@@ -134,10 +138,16 @@ func (a *Auditor) wpDBQueryInt(ctx context.Context, code, sql string) int {
 	return n
 }
 
+var validDBPrefix = regexp.MustCompile(`^[A-Za-z0-9_]+$`)
+
 func (a *Auditor) collectSite(ctx context.Context) audit.SiteInfo {
 	prefix := a.wp(ctx, "site.db_prefix", "db", "prefix")
-	if prefix == "" {
+	switch {
+	case prefix == "":
 		a.warnf("site.db_prefix.defaulted", "wp db prefix probe failed; defaulting to wp_")
+		prefix = "wp_"
+	case !validDBPrefix.MatchString(prefix):
+		a.warnf("site.db_prefix.invalid", "wp db prefix returned invalid value %q; defaulting to wp_", prefix)
 		prefix = "wp_"
 	}
 	return audit.SiteInfo{

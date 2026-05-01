@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -54,4 +55,13 @@ func mustBool(cmd *cobra.Command, name string) bool {
 		panic(fmt.Sprintf("flag %q missing: %v", name, err))
 	}
 	return v
+}
+
+// agentTokenOrEnv returns --agent-token if set, falling back to WP2EMDASH_AGENT_TOKEN.
+// Prefer env over CLI args to keep secrets out of shell history.
+func agentTokenOrEnv(cmd *cobra.Command) string {
+	if t := mustString(cmd, "agent-token"); t != "" {
+		return t
+	}
+	return os.Getenv("WP2EMDASH_AGENT_TOKEN")
 }

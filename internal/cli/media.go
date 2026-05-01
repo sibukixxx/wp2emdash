@@ -58,7 +58,7 @@ func runMediaScan(cmd *cobra.Command, _ []string) error {
 	maxFiles, _ := cmd.Flags().GetInt("max-files")
 	emitJSON := mustBool(cmd, "json")
 
-	res, err := usecase.RunMediaScan(usecase.MediaScanParams{
+	res, err := usecase.RunMediaScan(cmd.Context(), usecase.MediaScanParams{
 		Dir:           dir,
 		OutDir:        mustString(cmd, "out"),
 		ManifestPath:  mustString(cmd, "manifest"),
@@ -66,7 +66,7 @@ func runMediaScan(cmd *cobra.Command, _ []string) error {
 		MaxFiles:      maxFiles,
 		HistogramOnly: mustBool(cmd, "histogram-only"),
 		AgentURL:      agentURL,
-		AgentToken:    mustString(cmd, "agent-token"),
+		AgentToken:    agentTokenOrEnv(cmd),
 		AgentTimeout: func() time.Duration {
 			v, _ := cmd.Flags().GetDuration("agent-timeout")
 			return v

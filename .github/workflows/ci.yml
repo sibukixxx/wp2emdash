@@ -101,6 +101,6 @@ jobs:
         run: |
           VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo dev)
           go build \
-            -ldflags="-X github.com/rokubunnoni-inc/wp2emdash/internal/cli.Version=${VERSION}" \
+            -ldflags="-X github.com/sibukixxx/wp2emdash/internal/cli.Version=${VERSION}" \
             -o /tmp/wp2emdash-${{ matrix.goos }}-${{ matrix.goarch }} \
             ./cmd/wp2emdash

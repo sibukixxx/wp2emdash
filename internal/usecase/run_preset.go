@@ -59,8 +59,8 @@ func buildRegistry() *step.Registry {
 		return path.Join(p.WPRoot, "wp-content", "uploads")
 	}
 
-	reg.Register("media-scan-sample", func(_ context.Context, _ preset.Step, p step.Params) (step.Result, error) {
-		_, err := RunMediaScan(MediaScanParams{
+	reg.Register("media-scan-sample", func(ctx context.Context, _ preset.Step, p step.Params) (step.Result, error) {
+		_, err := RunMediaScan(ctx, MediaScanParams{
 			Dir:          uploadsDir(p),
 			OutDir:       p.OutDir,
 			MaxFiles:     200,
@@ -74,8 +74,8 @@ func buildRegistry() *step.Registry {
 		return step.Result{}, err
 	})
 
-	reg.Register("media-scan", func(_ context.Context, _ preset.Step, p step.Params) (step.Result, error) {
-		_, err := RunMediaScan(MediaScanParams{
+	reg.Register("media-scan", func(ctx context.Context, _ preset.Step, p step.Params) (step.Result, error) {
+		_, err := RunMediaScan(ctx, MediaScanParams{
 			Dir:          uploadsDir(p),
 			OutDir:       p.OutDir,
 			AgentURL:     p.AgentMediaURL,
@@ -88,8 +88,8 @@ func buildRegistry() *step.Registry {
 		return step.Result{}, err
 	})
 
-	reg.Register("media-scan-hash", func(_ context.Context, _ preset.Step, p step.Params) (step.Result, error) {
-		_, err := RunMediaScan(MediaScanParams{
+	reg.Register("media-scan-hash", func(ctx context.Context, _ preset.Step, p step.Params) (step.Result, error) {
+		_, err := RunMediaScan(ctx, MediaScanParams{
 			Dir:          uploadsDir(p),
 			OutDir:       p.OutDir,
 			Hash:         true,

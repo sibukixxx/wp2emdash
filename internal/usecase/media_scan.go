@@ -33,7 +33,7 @@ type MediaScanResult struct {
 	Path     string
 }
 
-func RunMediaScan(params MediaScanParams) (MediaScanResult, error) {
+func RunMediaScan(ctx context.Context, params MediaScanParams) (MediaScanResult, error) {
 	var (
 		manifest media.Manifest
 		err      error
@@ -43,14 +43,14 @@ func RunMediaScan(params MediaScanParams) (MediaScanResult, error) {
 		if params.SSHTarget != "" {
 			return MediaScanResult{}, fmt.Errorf("agent-url and ssh cannot be used together")
 		}
-		manifest, err = agenthttp.ScanMedia(context.Background(), params.AgentURL, params.AgentToken, params.AgentTimeout, agenthttp.MediaScanParams{
+		manifest, err = agenthttp.ScanMedia(ctx, params.AgentURL, params.AgentToken, params.AgentTimeout, agenthttp.MediaScanParams{
 			Dir:           params.Dir,
 			Hash:          params.Hash,
 			MaxFiles:      params.MaxFiles,
 			HistogramOnly: params.HistogramOnly,
 		})
 	case params.SSHTarget != "":
-		manifest, err = filesystem.ScanRemote(filesystem.RemoteScanConfig{
+		manifest, err = filesystem.ScanRemote(ctx, filesystem.RemoteScanConfig{
 			Target: params.SSHTarget,
 			Port:   params.SSHPort,
 			Key:    params.SSHKey,

@@ -1,6 +1,6 @@
 module github.com/sibukixxx/wp2emdash
 
-go 1.26.2
+go 1.22
 
 require github.com/spf13/cobra v1.10.2
 

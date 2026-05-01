@@ -34,9 +34,12 @@ type remoteManifest struct {
 	Files      []remoteFile   `json:"files,omitempty"`
 }
 
-func ScanRemote(cfg RemoteScanConfig, opt ScanOptions) (media.Manifest, error) {
+func ScanRemote(ctx context.Context, cfg RemoteScanConfig, opt ScanOptions) (media.Manifest, error) {
 	if strings.TrimSpace(cfg.Target) == "" {
 		return media.Manifest{}, fmt.Errorf("ssh target is required")
+	}
+	if strings.HasPrefix(cfg.Target, "-") {
+		return media.Manifest{}, fmt.Errorf("invalid ssh target: %q (must not start with '-')", cfg.Target)
 	}
 	if strings.TrimSpace(cfg.Dir) == "" {
 		return media.Manifest{}, fmt.Errorf("scan dir is required")
@@ -49,7 +52,7 @@ func ScanRemote(cfg RemoteScanConfig, opt ScanOptions) (media.Manifest, error) {
 		shell.QuotePOSIX(boolString(opt.WithFiles))+" "+
 		shell.QuotePOSIX(fmt.Sprintf("%d", opt.MaxFiles)))
 
-	out, err := shell.Runner{}.Output(context.Background(), "ssh", cmd...)
+	out, err := shell.Runner{}.Output(ctx, "ssh", cmd...)
 	if err != nil {
 		return media.Manifest{}, fmt.Errorf("remote media scan: %w", err)
 	}
@@ -91,7 +94,7 @@ func remoteSSHCommand(cfg RemoteScanConfig, remoteCmd string) []string {
 	if cfg.Key != "" {
 		args = append(args, "-i", cfg.Key)
 	}
-	args = append(args, cfg.Target, "sh -lc "+shell.QuotePOSIX(remoteCmd))
+	args = append(args, "--", cfg.Target, "sh -lc "+shell.QuotePOSIX(remoteCmd))
 	return args
 }
 

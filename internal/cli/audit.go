@@ -49,7 +49,7 @@ func runAuditCmd(cmd *cobra.Command, _ []string) error {
 		Version:       Version,
 		RiskBandsPath: mustString(cmd, "risk-bands"),
 		AgentURL:      mustString(cmd, "agent-url"),
-		AgentToken:    mustString(cmd, "agent-token"),
+		AgentToken:    agentTokenOrEnv(cmd),
 		AgentTimeout: func() time.Duration {
 			v, _ := cmd.Flags().GetDuration("agent-timeout")
 			return v

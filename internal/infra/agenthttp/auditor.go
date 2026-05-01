@@ -62,7 +62,7 @@ func (a *Auditor) Run(ctx context.Context) (audit.Audit, error) {
 	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
 		return audit.Audit{}, fmt.Errorf("decode agent response: %w", err)
 	}
-	a.warnings = append(a.warnings[:0], payload.Warnings...)
+	a.warnings = payload.Warnings
 	return payload.Audit, nil
 }
 

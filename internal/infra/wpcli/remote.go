@@ -41,11 +41,11 @@ func (a *Auditor) remoteOutput(ctx context.Context, code, script string) string 
 	if a.remote.Key != "" {
 		args = append(args, "-i", a.remote.Key)
 	}
-	args = append(args, a.remote.Target, "sh -lc "+shell.QuotePOSIX(script))
+	args = append(args, "--", a.remote.Target, "sh -lc "+shell.QuotePOSIX(script))
 
 	out, err := a.Runner.Output(ctx, "ssh", args...)
 	if err != nil {
-		a.warnf(code, "ssh %s failed: %v", a.remote.Target, err)
+		a.warnf(code, "ssh probe failed: %v", err)
 		return ""
 	}
 	return out

@@ -85,7 +85,7 @@ func runPreset(cmd *cobra.Command, _ []string) error {
 		RiskBandsPath: mustString(cmd, "risk-bands"),
 		AgentAuditURL: fallbackString(mustString(cmd, "agent-audit-url"), agentURL),
 		AgentMediaURL: fallbackString(mustString(cmd, "agent-media-url"), agentURL),
-		AgentToken:    mustString(cmd, "agent-token"),
+		AgentToken:    agentTokenOrEnv(cmd),
 		AgentTimeout: func() time.Duration {
 			v, _ := cmd.Flags().GetDuration("agent-timeout")
 			return v
