@@ -3,11 +3,12 @@ package cli
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 
-	"github.com/rokubunnoni-inc/wp2emdash/internal/cli/output"
-	"github.com/rokubunnoni-inc/wp2emdash/internal/usecase"
+	"github.com/sibukixxx/wp2emdash/internal/cli/output"
+	"github.com/sibukixxx/wp2emdash/internal/usecase"
 )
 
 func newMediaCmd() *cobra.Command {
@@ -35,13 +36,23 @@ which delegate the actual transfer to rclone / wrangler / aws-cli.`,
 	cmd.Flags().Int("max-files", 0, "stop after this many files (0 = no limit; useful for sample mode)")
 	cmd.Flags().Bool("histogram-only", false, "skip the per-file array, only emit totals + extension counts")
 	cmd.Flags().String("manifest", "", "write manifest to this file instead of --out/media-manifest.json")
+	cmd.Flags().String("agent-url", "", "HTTP endpoint for a read-only media scan agent")
+	cmd.Flags().String("agent-token", "", "bearer token for --agent-url")
+	cmd.Flags().Duration("agent-timeout", 30*time.Second, "HTTP timeout for --agent-url")
+	cmd.Flags().String("ssh", "", "SSH target for remote media scan execution (example: user@example.com)")
+	cmd.Flags().Int("ssh-port", 22, "SSH port for --ssh")
+	cmd.Flags().String("ssh-key", "", "SSH private key path for --ssh")
 	return cmd
 }
 
 func runMediaScan(cmd *cobra.Command, _ []string) error {
 	dir := mustString(cmd, "dir")
-	if _, err := os.Stat(dir); err != nil {
-		return fmt.Errorf("scan dir %s: %w", dir, err)
+	agentURL := mustString(cmd, "agent-url")
+	sshTarget := mustString(cmd, "ssh")
+	if agentURL == "" && sshTarget == "" {
+		if _, err := os.Stat(dir); err != nil {
+			return fmt.Errorf("scan dir %s: %w", dir, err)
+		}
 	}
 
 	maxFiles, _ := cmd.Flags().GetInt("max-files")
@@ -54,6 +65,18 @@ func runMediaScan(cmd *cobra.Command, _ []string) error {
 		Hash:          mustBool(cmd, "hash"),
 		MaxFiles:      maxFiles,
 		HistogramOnly: mustBool(cmd, "histogram-only"),
+		AgentURL:      agentURL,
+		AgentToken:    mustString(cmd, "agent-token"),
+		AgentTimeout: func() time.Duration {
+			v, _ := cmd.Flags().GetDuration("agent-timeout")
+			return v
+		}(),
+		SSHTarget: sshTarget,
+		SSHPort: func() int {
+			v, _ := cmd.Flags().GetInt("ssh-port")
+			return v
+		}(),
+		SSHKey: mustString(cmd, "ssh-key"),
 	})
 	if err != nil {
 		return err

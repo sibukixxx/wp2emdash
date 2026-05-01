@@ -5,8 +5,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/rokubunnoni-inc/wp2emdash/internal/cli/output"
-	"github.com/rokubunnoni-inc/wp2emdash/internal/usecase"
+	"github.com/sibukixxx/wp2emdash/internal/cli/output"
+	"github.com/sibukixxx/wp2emdash/internal/usecase"
 )
 
 func newDoctorCmd() *cobra.Command {
