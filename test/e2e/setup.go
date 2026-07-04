@@ -209,6 +209,9 @@ case "$*" in
       *"SELECT COUNT(*) FROM wp_posts WHERE post_content REGEXP '\\[[a-zA-Z0-9_-]+'"*)
         printf "5"
         ;;
+      *"LENGTH(post_content) > 90000"*)
+        printf "1"
+        ;;
       *"SELECT post_id, meta_key, meta_value FROM wp_postmeta WHERE post_id IN"*)
         printf '1\t_yoast_wpseo_title\tHello SEO\n'
         printf '1\t_yoast_wpseo_metadesc\tThe hello description\n'
