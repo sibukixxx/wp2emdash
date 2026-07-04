@@ -33,7 +33,11 @@ type DBPlan struct {
 	Tables       []DBTablePlan `json:"tables"`
 	Notes        []string      `json:"notes"`
 	Risks        []string      `json:"risks"`
-	NextActions  []string      `json:"next_actions"`
+	// TargetNotes covers the destination side (EmDash / Cloudflare D1+R2):
+	// constraints and cutover gates that repeatedly bite real migrations,
+	// independent of how clean the WordPress side looks.
+	TargetNotes []string `json:"target_notes"`
+	NextActions []string `json:"next_actions"`
 }
 
 type DBTablePlan struct {
@@ -108,6 +112,9 @@ func buildDBPlan(bundle reporting.Bundle, params DBPlanParams) DBPlan {
 	if a.Customization.ExternalIntegrationOccurrences > 0 {
 		risks = append(risks, fmt.Sprintf("External integration markers detected (%d). Some content may depend on data not stored in WordPress tables alone.", a.Customization.ExternalIntegrationOccurrences))
 	}
+	if a.Customization.OversizedContentCount > 0 {
+		risks = append(risks, fmt.Sprintf("Oversized post bodies detected (%d published posts > ~90KB). Direct D1 import hits the ~100KB per-statement limit (SQLITE_TOOBIG); plan chunked INSERT/UPDATE splitting.", a.Customization.OversizedContentCount))
+	}
 
 	strategy := "Export core WordPress content tables, treat plugin/meta tables as review-first, and transform postmeta before final import."
 	if len(risks) == 0 {
@@ -133,8 +140,32 @@ func buildDBPlan(bundle reporting.Bundle, params DBPlanParams) DBPlan {
 		},
 		Notes:       notes,
 		Risks:       risks,
+		TargetNotes: buildTargetNotes(a),
 		NextActions: dedupeStrings(actions),
 	}
+}
+
+// buildTargetNotes lists destination-side (EmDash / Cloudflare D1+R2) pitfalls
+// learned from real migrations. These are cheap to state up front and
+// expensive to discover in production.
+func buildTargetNotes(a audit.Audit) []string {
+	notes := []string{
+		"Never copy auth/identity tables across environments: passkey credentials are origin-bound and copied setup state can leave an environment nobody can log into. Ship structure only and create the first admin per environment.",
+		"Verify the target CMS seed importer preserves source created/updated/published timestamps; if it stamps apply-time, plan a post-import backfill step.",
+		"Use deterministic entry IDs (e.g. post-{wp_id}) so re-running the import is an idempotent upsert instead of duplicating content.",
+		"Cloudflare D1 gotchas: single statements over ~100KB fail (SQLITE_TOOBIG); FTS shadow tables reject direct INSERTs; per-table dumps omit indexes, so emit CREATE INDEX explicitly and run ANALYZE (without sqlite_stat1, D1 may ignore indexes).",
+		"Guard the import against silent shrinkage: abort when a fresh extract yields fewer rows than the previous run unless explicitly forced (transformer bug or truncated dump).",
+	}
+	if a.Uploads.Exists || a.Uploads.FileCount > 0 {
+		notes = append(notes, "Gate cutover on media completeness: when the new host does not fall back to the old origin, verify every media manifest URL returns 200 from the new storage before going live.")
+	}
+	if a.Uploads.PostsWithUploadsPaths > 0 {
+		notes = append(notes, fmt.Sprintf("%d posts embed wp-content/uploads paths; plan in-content URL rewriting (relativize or new host) plus keeping the old paths served via redirects or a worker route.", a.Uploads.PostsWithUploadsPaths))
+	}
+	if a.Uploads.PostsWithHTTPURLs > 0 {
+		notes = append(notes, fmt.Sprintf("%d posts contain plain http:// URLs; normalize to https during content transform.", a.Uploads.PostsWithHTTPURLs))
+	}
+	return notes
 }
 
 func actionForUsers(a audit.Audit) string {
@@ -214,6 +245,12 @@ func writeDBPlanMarkdown(path string, plan DBPlan) error {
 		sb.WriteString("\n## Risks\n\n")
 		for _, risk := range plan.Risks {
 			sb.WriteString(fmt.Sprintf("- %s\n", risk))
+		}
+	}
+	if len(plan.TargetNotes) > 0 {
+		sb.WriteString("\n## Target notes (EmDash / Cloudflare)\n\n")
+		for _, note := range plan.TargetNotes {
+			sb.WriteString(fmt.Sprintf("- %s\n", note))
 		}
 	}
 	if len(plan.NextActions) > 0 {
