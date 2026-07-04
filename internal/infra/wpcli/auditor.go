@@ -324,6 +324,10 @@ func (a *Auditor) collectCustomization(ctx context.Context, prefix string) audit
 		"SELECT COUNT(*) FROM %spostmeta WHERE meta_value LIKE 'a:%%' OR meta_value LIKE 'O:%%'", prefix))
 	stats.ShortcodePostCount = a.wpDBQueryInt(ctx, "customization.shortcode_posts", fmt.Sprintf(
 		`SELECT COUNT(*) FROM %sposts WHERE post_content REGEXP '\\[[a-zA-Z0-9_-]+'`, prefix))
+	// 90KB leaves headroom below D1's ~100KB per-statement ceiling for the
+	// INSERT wrapper and remaining columns.
+	stats.OversizedContentCount = a.wpDBQueryInt(ctx, "customization.oversized_content", fmt.Sprintf(
+		"SELECT COUNT(*) FROM %sposts WHERE post_status = 'publish' AND LENGTH(post_content) > 90000", prefix))
 
 	// .htaccess / theme code redirects / external integrations.
 	htaccessPath := a.wpPath(".htaccess")

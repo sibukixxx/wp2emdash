@@ -125,14 +125,14 @@ Artifacts are written to `wp2emdash-output/` by default:
 ### Added in v0.2
 
 - `db plan`
-  Reads `summary.json` and emits a plan that classifies WordPress tables and metadata as `export`, `review`, `transform`, or `skip`. It does not dump or modify the database.
+  Reads `summary.json` and emits a plan that classifies WordPress tables and metadata as `export`, `review`, `transform`, or `skip`. It does not dump or modify the database. The plan also carries a `target_notes` checklist for the destination side (EmDash / Cloudflare D1+R2): never copy auth tables across environments, verify the seed importer preserves source timestamps, D1's per-statement size ceiling, media completeness gating before cutover, and more. The lessons behind these notes are documented in [`docs/case-studies/newsmedia-13k-posts-lessons.md`](docs/case-studies/newsmedia-13k-posts-lessons.md) (Japanese).
 - `secrets check`
   Checks existing environment variables only. It never generates or overwrites `.env`. Supported profiles are `small-production`, `seo-production`, `media-heavy`, `custom-rebuild`, and `agent`.
 
 ### Added in v0.4
 
 - `seo extract-meta`
-  Lists every published post / page via `wp post list`, then merges Yoast, Rank Math, and AIOSEO post meta keys into a single `seo-meta.json`. Plugin precedence is **Yoast > Rank Math > AIOSEO**, with the contributing plugin recorded in the `source` field.
+  Lists every published post / page via `wp post list`, then merges Yoast, Rank Math, and AIOSEO post meta keys into a single `seo-meta.json`. Plugin precedence is **Yoast > Rank Math > AIOSEO**, with the contributing plugin recorded in the `source` field. The `{prefix}yoast_indexable` table used by Yoast 14+ is auto-detected as well, so editor overrides are not lost when the legacy postmeta rows are empty or stale (explicit postmeta > indexable > core; provenance recorded as `source: "yoast_indexable"`).
 - `seo extract-redirects`
   Combines three redirect sources into a single `seo-redirects.json`: `.htaccess` (`Redirect`, `RedirectMatch`, `RewriteRule [R=...]`), Redirection plugin (`wp_redirection_items`), and Safe Redirect Manager (`post_type=redirect_rule`).
 - `seo url-map`
@@ -261,6 +261,7 @@ Response:
       "shortcode_post_count": 5,
       "seo_meta_count": 11,
       "serialized_meta_count": 9,
+      "oversized_content_count": 0,
       "htaccess_redirect_like_lines": 0,
       "code_redirect_like_occurrences": 0,
       "external_integration_like_occurrences": 0

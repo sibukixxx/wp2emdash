@@ -136,14 +136,14 @@ wp2emdash seo url-map --old wp-urls.txt --new emdash-urls.txt
 ### v0.2 で追加したもの
 
 - `db plan`
-  `summary.json` を入力に、`wp_posts` / `wp_postmeta` / taxonomy / users / comments などを `export` / `review` / `transform` / `skip` に分類した計画を出力する。DB ダンプや書き換えは行わない。
+  `summary.json` を入力に、`wp_posts` / `wp_postmeta` / taxonomy / users / comments などを `export` / `review` / `transform` / `skip` に分類した計画を出力する。DB ダンプや書き換えは行わない。移行先（EmDash / Cloudflare D1+R2）側の落とし穴チェックリストも `target_notes` として同梱する（認証テーブルのコピー禁止 / タイムスタンプ保持の検証 / D1 の statement サイズ上限 / メディア完全性ゲート等。実移行の教訓は [`docs/case-studies/newsmedia-13k-posts-lessons.md`](docs/case-studies/newsmedia-13k-posts-lessons.md)）。
 - `secrets check`
   `.env` を生成せず、既存の環境変数に必要な credential が揃っているかだけを検査する。対応 profile は `small-production` / `seo-production` / `media-heavy` / `custom-rebuild` / `agent`。
 
 ### v0.4 で追加したもの
 
 - `seo extract-meta`
-  `wp post list` で公開済み投稿/固定ページを列挙し、Yoast / Rank Math / AIOSEO の postmeta を 1 つに正規化して `seo-meta.json` を出力する。複数プラグインが共存している場合は **Yoast > Rank Math > AIOSEO** の優先順位でマージ（`source` フィールドで由来を保持）。
+  `wp post list` で公開済み投稿/固定ページを列挙し、Yoast / Rank Math / AIOSEO の postmeta を 1 つに正規化して `seo-meta.json` を出力する。複数プラグインが共存している場合は **Yoast > Rank Math > AIOSEO** の優先順位でマージ（`source` フィールドで由来を保持）。Yoast 14+ が使う `{prefix}yoast_indexable` テーブルも自動検出し、postmeta が空・stale な場合のエディタ上書きを取りこぼさない（postmeta 明示値 > indexable > core の優先順位、由来は `source: "yoast_indexable"`）。
 - `seo extract-redirects`
   `.htaccess` の `Redirect` / `RedirectMatch` / `RewriteRule [R=...]` と、Redirection プラグイン (`wp_redirection_items`)、Safe Redirect Manager (`post_type=redirect_rule`) を 1 つの `seo-redirects.json` に統合する。
 - `seo url-map`
@@ -281,6 +281,7 @@ response:
       "shortcode_post_count": 5,
       "seo_meta_count": 11,
       "serialized_meta_count": 9,
+      "oversized_content_count": 0,
       "htaccess_redirect_like_lines": 0,
       "code_redirect_like_occurrences": 0,
       "external_integration_like_occurrences": 0

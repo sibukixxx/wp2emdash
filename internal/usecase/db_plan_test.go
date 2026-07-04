@@ -28,6 +28,10 @@ func TestRunDBPlan_WritesPlanArtifacts(t *testing.T) {
 	bundle.Audit.Customization.SerializedMetaCount = 9
 	bundle.Audit.Customization.SEOMetaCount = 11
 	bundle.Audit.Customization.ShortcodePostCount = 5
+	bundle.Audit.Customization.OversizedContentCount = 3
+	bundle.Audit.Uploads.Exists = true
+	bundle.Audit.Uploads.PostsWithUploadsPaths = 7
+	bundle.Audit.Uploads.PostsWithHTTPURLs = 2
 	if err := reporting.WriteAll(outDir, bundle); err != nil {
 		t.Fatalf("write summary bundle: %v", err)
 	}
@@ -47,6 +51,21 @@ func TestRunDBPlan_WritesPlanArtifacts(t *testing.T) {
 	if len(res.Plan.Risks) == 0 {
 		t.Fatal("risks: want entries, got 0")
 	}
+	if !containsSubstring(res.Plan.Risks, "SQLITE_TOOBIG") {
+		t.Errorf("risks missing D1 statement-size warning for oversized posts: %v", res.Plan.Risks)
+	}
+	if len(res.Plan.TargetNotes) == 0 {
+		t.Fatal("target notes: want entries, got 0")
+	}
+	if !containsSubstring(res.Plan.TargetNotes, "passkey") {
+		t.Errorf("target notes missing auth-table warning: %v", res.Plan.TargetNotes)
+	}
+	if !containsSubstring(res.Plan.TargetNotes, "media completeness") {
+		t.Errorf("target notes missing media completeness gate: %v", res.Plan.TargetNotes)
+	}
+	if !containsSubstring(res.Plan.TargetNotes, "7 posts embed wp-content/uploads") {
+		t.Errorf("target notes missing uploads rewrite note: %v", res.Plan.TargetNotes)
+	}
 
 	md, err := os.ReadFile(filepath.Join(outDir, "db-plan.md"))
 	if err != nil {
@@ -55,4 +74,16 @@ func TestRunDBPlan_WritesPlanArtifacts(t *testing.T) {
 	if !strings.Contains(string(md), "# DB Migration Plan") {
 		t.Fatalf("markdown missing heading:\n%s", string(md))
 	}
+	if !strings.Contains(string(md), "## Target notes (EmDash / Cloudflare)") {
+		t.Fatalf("markdown missing target notes section:\n%s", string(md))
+	}
+}
+
+func containsSubstring(items []string, sub string) bool {
+	for _, s := range items {
+		if strings.Contains(s, sub) {
+			return true
+		}
+	}
+	return false
 }

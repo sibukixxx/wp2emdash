@@ -123,6 +123,9 @@ case "$*" in
       *"SELECT COUNT(*) FROM wp_posts WHERE post_content REGEXP '\\[[a-zA-Z0-9_-]+'"*)
         printf "5"
         ;;
+      *"LENGTH(post_content) > 90000"*)
+        printf "0"
+        ;;
       *)
         exit 1
         ;;

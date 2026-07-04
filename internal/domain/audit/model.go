@@ -67,6 +67,10 @@ type CustomStats struct {
 	ShortcodePostCount             int `json:"shortcode_post_count"`
 	SEOMetaCount                   int `json:"seo_meta_count"`
 	SerializedMetaCount            int `json:"serialized_meta_count"`
+	// OversizedContentCount counts published posts whose body alone exceeds
+	// ~90KB. Cloudflare D1 rejects single statements over ~100KB
+	// (SQLITE_TOOBIG), so these posts need chunked import handling.
+	OversizedContentCount          int `json:"oversized_content_count"`
 	HtaccessRedirectLikeLines      int `json:"htaccess_redirect_like_lines"`
 	CodeRedirectLikeOccurrences    int `json:"code_redirect_like_occurrences"`
 	ExternalIntegrationOccurrences int `json:"external_integration_like_occurrences"`
