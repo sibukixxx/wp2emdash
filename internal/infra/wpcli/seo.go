@@ -27,6 +27,7 @@ func (a *Auditor) ExtractMeta(ctx context.Context) ([]seo.MetaItem, error) {
 		return []seo.MetaItem{}, nil
 	}
 	rawMeta := a.collectSEOMeta(ctx, site.DBPrefix, postIDs(posts))
+	indexables := a.collectYoastIndexables(ctx, site.DBPrefix)
 
 	items := make([]seo.MetaItem, 0, len(posts))
 	for _, p := range posts {
@@ -39,6 +40,9 @@ func (a *Auditor) ExtractMeta(ctx context.Context) ([]seo.MetaItem, error) {
 			Source:   "core",
 		}
 		seo.ApplyPostMeta(&item, rawMeta[p.ID])
+		if row, ok := indexables[p.ID]; ok {
+			seo.ApplyYoastIndexable(&item, row)
+		}
 		items = append(items, item)
 	}
 	return items, nil

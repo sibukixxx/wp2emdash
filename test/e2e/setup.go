@@ -212,6 +212,13 @@ case "$*" in
       *"LENGTH(post_content) > 90000"*)
         printf "1"
         ;;
+      *"information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'wp_yoast_indexable'"*)
+        printf "1"
+        ;;
+      *"FROM wp_yoast_indexable WHERE object_type = 'post'"*)
+        printf '{"object_id": 1, "description": "Indexable desc (must not win)"}\n'
+        printf '{"object_id": 2, "og_title": "About OG (indexable)"}\n'
+        ;;
       *"SELECT post_id, meta_key, meta_value FROM wp_postmeta WHERE post_id IN"*)
         printf '1\t_yoast_wpseo_title\tHello SEO\n'
         printf '1\t_yoast_wpseo_metadesc\tThe hello description\n'

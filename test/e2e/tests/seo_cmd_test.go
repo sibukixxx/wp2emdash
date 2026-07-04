@@ -39,11 +39,17 @@ func TestSEOExtractMetaCommand_WritesItemsAndMergesPluginPrecedence(t *testing.T
 	if !set.Items[0].NoIndex {
 		t.Errorf("post 1 NoIndex should be true")
 	}
+	if set.Items[0].Description != "The hello description" {
+		t.Errorf("post 1 description: postmeta must win over yoast_indexable, got %q", set.Items[0].Description)
+	}
 	if set.Items[1].Title != "About Page" {
 		t.Errorf("post 2 title should come from Rank Math: got %q", set.Items[1].Title)
 	}
 	if set.Items[1].Source != "rank_math" {
 		t.Errorf("post 2 source: want rank_math, got %q", set.Items[1].Source)
+	}
+	if set.Items[1].OGTitle != "About OG (indexable)" {
+		t.Errorf("post 2 og_title should be backfilled from yoast_indexable, got %q", set.Items[1].OGTitle)
 	}
 }
 
