@@ -51,8 +51,11 @@ mysqldump → source JSON (extract) → seed.json (build) → D1 (apply / apply-
 
 ### 4. タイムスタンプ
 
-EmDash 0.8.0 の `emdash seed` は created/updated/published を**適用時刻で上書き**する。
+EmDash の `emdash seed`（`applySeed`）は created/updated/published を**適用時刻で上書き**する。
 移行後に `wp_published_at` からのバックフィル UPDATE（値が違う場合のみ更新＝冪等）が必要だった。
+※ 2026-08 時点の EmDash 最新版（v0.33.0、`packages/core/src/seed/apply.ts`）でも
+`new Date().toISOString()` で無条件上書きする実装のままであることをソースで確認済み。
+特定バージョンに限った不具合ではなく、`emdash seed` 経由で投入する限り恒常的に発生する。
 
 → `target_notes` に「seed importer がソース日時を保持するか検証し、しなければバックフィルを計画」を追加。
 
