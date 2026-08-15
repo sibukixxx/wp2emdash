@@ -1,8 +1,30 @@
 # wp2emdash
 
-English documentation for `wp2emdash`. Japanese documentation lives in [README.md](README.md).
+[![CI](https://github.com/sibukixxx/wp2emdash/actions/workflows/ci.yml/badge.svg)](https://github.com/sibukixxx/wp2emdash/actions/workflows/ci.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/sibukixxx/wp2emdash.svg)](https://pkg.go.dev/github.com/sibukixxx/wp2emdash)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/sibukixxx/wp2emdash)](go.mod)
+[![Sponsor](https://img.shields.io/badge/sponsor-%E2%9D%A4-ea4aaa?logo=githubsponsors)](https://github.com/sponsors/sibukixxx)
+
+English documentation for `wp2emdash`. Japanese documentation lives in [README.md](README.md) (日本語版).
 
 `wp2emdash` is a Go CLI that breaks a WordPress → EmDash migration into small, phase-oriented commands. It follows a Unix-style approach: wrap existing tools such as `wp-cli`, `wrangler`, and `rclone` thinly, then emit JSON or Markdown that can be piped into other tooling.
+
+## Table of Contents
+
+- [Why Small Commands](#why-small-commands)
+- [Install](#install)
+- [Quick Start](#quick-start)
+- [Commands](#v01--v02--v04-commands)
+- [Presets](#presets)
+- [Architecture](#architecture)
+- [Design Principles](#design-principles)
+- [HTTP Agent Schema](#http-agent-schema)
+- [Roadmap](#roadmap)
+- [Legacy Bash](#legacy-bash)
+- [Contributing](#contributing)
+- [Support the Project](#support-the-project)
+- [License](#license)
 
 ```
 wp2emdash audit                  -> measure migration complexity and score risk
@@ -338,6 +360,14 @@ For `run --preset`, the preferred form is:
 - Useful in very constrained remote environments
 - Keeps the same scoring weights
 - Serves as a fallback and behavioral reference
+
+## Contributing
+
+Issues are currently closed while the core command set stabilizes; pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the PR flow and quality gates (`make build` / `make test` / `make vet`, `go test -race -count=1 ./...` in CI).
+
+## Support the Project
+
+If `wp2emdash` saves you migration time, consider [sponsoring on GitHub Sponsors](https://github.com/sponsors/sibukixxx).
 
 ## License
 
