@@ -6,7 +6,7 @@ Claude Code 向けのプロジェクト指示。本リポジトリの正典は [
 ## 最初に読む順序
 
 1. [`AGENTS.md`](AGENTS.md) — 設計原則・ディレクトリ構成・新コマンド追加手順
-2. [`README.md`](README.md) — 機能一覧・プリセット・ユーザー視点
+2. [`README.ja.md`](README.ja.md) — 機能一覧・プリセット・ユーザー視点
 3. [`CONTRIBUTING.md`](CONTRIBUTING.md) — PR フロー・品質ゲート
 
 ## このプロジェクトの一行要約
