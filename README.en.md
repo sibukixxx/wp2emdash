@@ -4,11 +4,16 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/sibukixxx/wp2emdash.svg)](https://pkg.go.dev/github.com/sibukixxx/wp2emdash)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/sibukixxx/wp2emdash)](go.mod)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![Sponsor](https://img.shields.io/badge/sponsor-%E2%9D%A4-ea4aaa?logo=githubsponsors)](https://github.com/sponsors/sibukixxx)
 
 English documentation for `wp2emdash`. Japanese documentation lives in [README.md](README.md) (日本語版).
 
-`wp2emdash` is a Go CLI that breaks a WordPress → EmDash migration into small, phase-oriented commands. It follows a Unix-style approach: wrap existing tools such as `wp-cli`, `wrangler`, and `rclone` thinly, then emit JSON or Markdown that can be piped into other tooling.
+Migrating WordPress to a new platform usually means either a risky one-shot "migrate everything" script, or weeks of manual auditing before anyone can even estimate the work. `wp2emdash` takes a third path: it's a Go CLI that breaks a WordPress → [EmDash](https://github.com/emdash-cms/emdash) migration into small, phase-oriented commands you can run, inspect, and trust one at a time. It follows a Unix-style approach — wrap existing tools such as `wp-cli`, `wrangler`, and `rclone` thinly, then emit JSON or Markdown that pipes cleanly into other tooling.
+
+In minutes, `wp2emdash audit` turns a WordPress install into a scored complexity report and a migration-effort estimate — the kind of assessment that otherwise takes a consultant a day of manual digging.
+
+If this saves you time, a ⭐ on the repo helps other people migrating off WordPress find it too.
 
 ## Table of Contents
 
@@ -367,7 +372,9 @@ Issues are currently closed while the core command set stabilizes; pull requests
 
 ## Support the Project
 
-If `wp2emdash` saves you migration time, consider [sponsoring on GitHub Sponsors](https://github.com/sponsors/sibukixxx).
+If `wp2emdash` saves you migration time, consider [sponsoring on GitHub Sponsors](https://github.com/sponsors/sibukixxx) or starring the repo so others can find it.
+
+[![Star History Chart](https://api.star-history.com/svg?repos=sibukixxx/wp2emdash&type=Date)](https://star-history.com/#sibukixxx/wp2emdash&Date)
 
 ## License
 
