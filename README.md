@@ -10,6 +10,8 @@ English | [日本語](README.ja.md) | [简体中文](README.zh-CN.md)
 
 `wp2emdash` is a Go CLI that breaks a WordPress → EmDash migration into small, phase-oriented commands. It follows a Unix-style approach: wrap existing tools such as `wp-cli`, `wrangler`, and `rclone` thinly, then emit JSON or Markdown that can be piped into other tooling.
 
+> **EmDash imports your WordPress content. wp2emdash proves that nothing important was lost.** The official importer owns WXR/plugin import, Gutenberg conversion, schema creation, and media rewriting. `content verify` independently adds durable ID evidence, semantic HTML ↔ Portable Text comparison, mapped-field loss detection, and a reproducible CI/cutover gate.
+
 ## Table of Contents
 
 - [Why Small Commands](#why-small-commands)
@@ -37,6 +39,8 @@ wp2emdash seo extract-meta       -> dump per-post SEO metadata as JSON
 wp2emdash seo extract-redirects  -> dump .htaccess + plugin redirects as JSON
 wp2emdash seo url-map            -> diff two URL maps to find missing/added URLs
 wp2emdash doctor                 -> check required external tools
+wp2emdash content snapshot       -> fingerprint content without storing body text
+wp2emdash content verify         -> gate cutover on source-to-target integrity
 ```
 
 ## Why Small Commands
@@ -143,6 +147,9 @@ Artifacts are written to `wp2emdash-output/` by default:
 | `seo extract-meta` | Dump per-post SEO metadata (Yoast / Rank Math / AIOSEO merged) | `--wp-root` `--write` `--ssh` |
 | `seo extract-redirects` | Extract redirects from `.htaccess` and Redirection / SRM plugins | `--wp-root` `--write` `--ssh` |
 | `seo url-map` | Diff two URL maps (matched / missing / new) | `--old` `--new` `--write` |
+| `content snapshot wordpress` | Capture privacy-preserving WordPress fingerprints | `--wp-root` `--map` `--ssh` |
+| `content snapshot emdash` | Capture EmDash fingerprints via the official CLI | `--url` `--map` `--jobs` |
+| `content verify` | Compare snapshots and emit a cutover gate plus resolved ID ledger | `--expected` `--actual` `--map` `--policy` |
 
 ### Added in v0.2
 
@@ -159,6 +166,18 @@ Artifacts are written to `wp2emdash-output/` by default:
   Combines three redirect sources into a single `seo-redirects.json`: `.htaccess` (`Redirect`, `RedirectMatch`, `RewriteRule [R=...]`), Redirection plugin (`wp_redirection_items`), and Safe Redirect Manager (`post_type=redirect_rule`).
 - `seo url-map`
   Diffs two URL maps and reports `matched`, `only_in_old` (likely needs an explicit redirect), and `only_in_new`. Inputs may be JSON or plain text (one URL per line). URLs are normalised before comparison (scheme, trailing slash, fragment); path case is preserved.
+
+### Independent content verification
+
+Run the official EmDash import first, then capture both sides and verify them:
+
+```bash
+wp2emdash content snapshot wordpress --wp-root /var/www/html
+wp2emdash content snapshot emdash --url https://new.example.com
+wp2emdash content verify
+```
+
+Snapshots contain hashes and structural evidence, not raw post bodies. Verification checks identity, status, title, timestamps, visible text, headings, links, images, and configured custom fields. Explicit WordPress ID ↔ EmDash ID mappings win; unique slug matches are reported as warnings and written to `content-resolved-map.json` for subsequent deterministic runs. Critical/errors fail the command for CI and cutover use; `--policy` can override stable issue-code severities or allowed counts.
 
 The core scoring rubric is additive. Public-facing level labels and estimate bands are replaceable through `--risk-bands path/to/custom.json`. The table below is only the example shipped in the default bundled policy:
 

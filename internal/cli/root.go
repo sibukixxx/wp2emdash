@@ -40,6 +40,7 @@ commands require an explicit confirmation flag.`,
 	root.AddCommand(newRunCmd())
 	root.AddCommand(newSecretsCmd())
 	root.AddCommand(newSEOCmd())
+	root.AddCommand(newContentCmd())
 
 	return root
 }
@@ -54,6 +55,14 @@ func mustString(cmd *cobra.Command, name string) string {
 
 func mustBool(cmd *cobra.Command, name string) bool {
 	v, err := cmd.Flags().GetBool(name)
+	if err != nil {
+		panic(fmt.Sprintf("flag %q missing: %v", name, err))
+	}
+	return v
+}
+
+func mustInt(cmd *cobra.Command, name string) int {
+	v, err := cmd.Flags().GetInt(name)
 	if err != nil {
 		panic(fmt.Sprintf("flag %q missing: %v", name, err))
 	}

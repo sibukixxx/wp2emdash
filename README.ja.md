@@ -4,6 +4,8 @@
 
 WordPress → EmDash 移行を **フェーズ別の小さなコマンド群** として実行する Go 製 CLI。Unix 思想に倣い、`wp-cli` / `wrangler` / `rclone` などの既存ツールを薄くラップして JSON / Markdown を出力するので、他ツールに繋げやすい。
 
+> **EmDashはWordPressコンテンツを取り込み、wp2emdashは重要なものが失われていないことを証明します。** 公式ImporterのWXR/plugin import、Gutenberg変換、schema作成、media rewriteは再実装せず、`content verify` がID照合台帳、HTML ↔ Portable Textの意味比較、mapped fieldの欠落検出、CI/cutover gateを提供する。
+
 ```
 wp2emdash audit          → 複雑度を計測・スコア化
 wp2emdash db plan        → summary.json から DB 移行計画を生成
@@ -12,7 +14,11 @@ wp2emdash report         → summary.json から risk-report.md を再生成
 wp2emdash run --preset   → フェーズプリセットを実行
 wp2emdash secrets check  → preset ごとに必要な secrets の存在を確認
 wp2emdash doctor         → 必要な外部ツールが揃っているか確認
+wp2emdash content snapshot → 本文を保存せずcontent fingerprintを生成
+wp2emdash content verify → 移行完全性を検証してcutoverをgate
 ```
+
+`content verify` は公式EmDash Importerの代替ではなく、import後の独立検証レイヤー。本文原文を保存せず、ID、status、title、日時、可視テキスト、heading、link、image、設定したcustom fieldをfingerprintで比較する。critical/errorは非ゼロ終了し、CIとcutover gateに利用できる。初回の一意slug照合はwarningとして`content-resolved-map.json`へ固定され、次回からIDで決定論的に照合する。
 
 ## なぜ別ツールか
 

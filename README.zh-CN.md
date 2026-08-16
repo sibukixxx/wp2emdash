@@ -9,6 +9,8 @@
 
 `wp2emdash` 是一个用 Go 编写的 WordPress → EmDash 迁移 CLI。它遵循 Unix 思想，将迁移拆分为按阶段执行的小命令，并对 `wp-cli`、`wrangler`、`rclone` 等现有工具进行轻量封装。命令输出 JSON 或 Markdown，便于与其他工具组合使用。
 
+> **EmDash 负责导入 WordPress 内容；wp2emdash 负责证明重要内容没有丢失。** 官方导入器继续负责 WXR/plugin 导入、Gutenberg 转换、schema 创建和媒体重写；`content verify` 提供持久 ID 证据、HTML ↔ Portable Text 语义比较、字段丢失检测及 CI/cutover gate。
+
 ## 目录
 
 - [为什么使用小命令](#为什么使用小命令)

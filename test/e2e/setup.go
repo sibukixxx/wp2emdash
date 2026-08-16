@@ -192,6 +192,9 @@ case "$*" in
   "post list --post_status=publish --post_type=post,page --fields=ID,post_type,post_name,post_title,url --format=json")
     printf '[{"ID":1,"post_type":"post","post_name":"hello","post_title":"Hello","url":"https://example.test/hello/"},{"ID":2,"post_type":"page","post_name":"about","post_title":"About","url":"https://example.test/about/"}]'
     ;;
+  "post list --post_type=page,post --post_status=publish,draft,pending,private,future --posts_per_page=500 --paged=1 --fields=ID,post_type,post_name,post_status,post_title,post_content,post_excerpt,post_author,post_parent,post_date_gmt,post_modified_gmt --format=json")
+    printf '[{"ID":1,"post_type":"post","post_name":"hello","post_status":"publish","post_title":"Hello","post_content":"<p>Hello world</p>","post_excerpt":"","post_author":"1","post_parent":"0","post_date_gmt":"2024-01-02 03:04:05","post_modified_gmt":"2024-01-02 03:04:05"}]'
+    ;;
   *)
     case "$*" in
       *"SELECT COUNT(*) FROM wp_posts WHERE post_content LIKE '%wp-content/uploads%'"*)
