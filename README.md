@@ -1,5 +1,9 @@
 # wp2emdash
 
+[![CI](https://github.com/sibukixxx/wp2emdash/actions/workflows/ci.yml/badge.svg)](https://github.com/sibukixxx/wp2emdash/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/sibukixxx/wp2emdash)](go.mod)
+
 English documentation: [README.en.md](README.en.md)
 
 WordPress → EmDash 移行を **フェーズ別の小さなコマンド群** として実行する Go 製 CLI。Unix 思想に倣い、`wp-cli` / `wrangler` / `rclone` などの既存ツールを薄くラップして JSON / Markdown を出力するので、他ツールに繋げやすい。
