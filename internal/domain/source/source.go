@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/sibukixxx/wp2emdash/internal/domain/audit"
+	"github.com/sibukixxx/wp2emdash/internal/domain/contentverify"
 	"github.com/sibukixxx/wp2emdash/internal/domain/seo"
 )
 
@@ -40,4 +41,9 @@ type MetaExtractor interface {
 // a migration source. Used by `wp2emdash seo extract-redirects`.
 type RedirectExtractor interface {
 	ExtractRedirects(ctx context.Context) ([]seo.RedirectRule, error)
+}
+
+// ContentSnapshotter reads content without mutating either migration endpoint.
+type ContentSnapshotter interface {
+	Snapshot(ctx context.Context, mapping contentverify.Map) (contentverify.Snapshot, error)
 }

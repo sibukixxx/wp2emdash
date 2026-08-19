@@ -1,6 +1,6 @@
 # Contributing to wp2emdash
 
-English project overview: [README.en.md](README.en.md)
+Project overview: [English](README.md) | [日本語](README.ja.md) | [简体中文](README.zh-CN.md)
 
 wp2emdash は **EmDash 移行を Unix 思想で扱う orchestrator** です。設計の軸を外さない PR を歓迎します。
 
@@ -17,7 +17,7 @@ wp2emdash は **EmDash 移行を Unix 思想で扱う orchestrator** です。�
 ## 開発フロー
 
 ```bash
-git clone <this-repo>
+git clone https://github.com/sibukixxx/wp2emdash.git
 cd wp2emdash
 make build      # bin/wp2emdash
 make test       # go test -race -count=1 ./...
@@ -64,4 +64,4 @@ PR で minimum 通すべきもの:
 
 ## ロードマップ
 
-[README.md の「ロードマップ」](README.md#ロードマップ) を参照。新機能は roadmap にある項目を優先します。
+[README.ja.md の「ロードマップ」](README.ja.md#ロードマップ) を参照。新機能は roadmap にある項目を優先します。

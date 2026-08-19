@@ -1,0 +1,399 @@
+# wp2emdash
+
+[English](README.md) | 日本語 | [简体中文](README.zh-CN.md)
+
+WordPress → EmDash 移行を **フェーズ別の小さなコマンド群** として実行する Go 製 CLI。Unix 思想に倣い、`wp-cli` / `wrangler` / `rclone` などの既存ツールを薄くラップして JSON / Markdown を出力するので、他ツールに繋げやすい。
+
+> **EmDashはWordPressコンテンツを取り込み、wp2emdashは重要なものが失われていないことを証明します。** 公式ImporterのWXR/plugin import、Gutenberg変換、schema作成、media rewriteは再実装せず、`content verify` がID照合台帳、HTML ↔ Portable Textの意味比較、mapped fieldの欠落検出、CI/cutover gateを提供する。
+
+```
+wp2emdash audit          → 複雑度を計測・スコア化
+wp2emdash db plan        → summary.json から DB 移行計画を生成
+wp2emdash media scan     → wp-content/uploads を JSON manifest 化
+wp2emdash report         → summary.json から risk-report.md を再生成
+wp2emdash run --preset   → フェーズプリセットを実行
+wp2emdash secrets check  → preset ごとに必要な secrets の存在を確認
+wp2emdash doctor         → 必要な外部ツールが揃っているか確認
+wp2emdash content snapshot → 本文を保存せずcontent fingerprintを生成
+wp2emdash content verify → 移行完全性を検証してcutoverをgate
+```
+
+`content verify` は公式EmDash Importerの代替ではなく、import後の独立検証レイヤー。本文原文を保存せず、ID、status、title、日時、可視テキスト、heading、link、image、設定したcustom fieldをfingerprintで比較する。critical/errorは非ゼロ終了し、CIとcutover gateに利用できる。初回の一意slug照合はwarningとして`content-resolved-map.json`へ固定され、次回からIDで決定論的に照合する。
+
+## なぜ別ツールか
+
+EmDash 移行は「全部入りの自動移行」よりも、案件ごとに
+
+```
+最低検証 → 小規模本番 → SEO 込み本番 → メディア本格 → 独自機能込み
+```
+
+のように **フェーズ別に組み合わせる** ほうが現実的。`wp2emdash` は orchestrator として個別フェーズの作業を機械化し、人間判断が必要な部分は明示的に残す。
+
+## インストール
+
+### ソースから
+
+Go 1.22 以上。
+
+```bash
+git clone https://github.com/sibukixxx/wp2emdash.git
+cd wp2emdash
+make build              # ./bin/wp2emdash
+./bin/wp2emdash --help
+
+# あるいは
+go install github.com/sibukixxx/wp2emdash/cmd/wp2emdash@latest
+```
+
+## クイックスタート
+
+WordPress サーバ（または `wp-config.php` がある場所）で:
+
+```bash
+# 1. 依存ツールが揃っているか確認
+wp2emdash doctor
+
+# 2. WordPress 複雑度を計測してスコア化
+wp2emdash audit --wp-root /var/www/html
+#   → wp2emdash-output/summary.json
+#   → wp2emdash-output/risk-report.md
+
+# HTTP agent 経由でも監査可能
+wp2emdash audit \
+  --agent-url https://example.com/wp-json/wp2emdash/v1/audit \
+  --agent-token secret-token
+
+# 公開版ではリスク帯/見積り帯の policy を差し替え可能
+wp2emdash audit \
+  --wp-root /var/www/html \
+  --risk-bands ./config/custom-risk-bands.json
+
+# 3. uploads を manifest 化（R2 同期前の差分計算用）
+wp2emdash media scan --dir /var/www/html/wp-content/uploads --hash
+#   → wp2emdash-output/media-manifest.json
+
+# HTTP agent 経由でも media scan 可能
+wp2emdash media scan \
+  --agent-url https://example.com/wp-json/wp2emdash/v1/media-scan \
+  --agent-token secret-token \
+  --dir wp-content/uploads
+
+# 4. 「最低検証」プリセットを dry-run で確認 → apply
+wp2emdash run --preset minimal --wp-root /var/www/html --dry-run
+wp2emdash run --preset minimal --wp-root /var/www/html --apply
+
+# 5. summary.json から DB 移行計画を生成
+wp2emdash db plan \
+  --from wp2emdash-output/summary.json \
+  --preset small-production
+#   → wp2emdash-output/db-plan.json
+#   → wp2emdash-output/db-plan.md
+
+# 6. preset ごとに必要な secrets の存在を確認
+wp2emdash secrets check --profile small-production
+wp2emdash secrets check --profile media-heavy --json
+
+# 7. HTTP agent 経由で preset minimal を実行
+wp2emdash run --preset minimal \
+  --agent-audit-url https://example.com/wp-json/wp2emdash/v1/audit \
+  --agent-media-url https://example.com/wp-json/wp2emdash/v1/media-scan \
+  --agent-token secret-token \
+  --wp-root /var/www/html \
+  --apply
+
+# 8. preset 実行でも同じ policy file を使える
+wp2emdash run --preset minimal \
+  --wp-root /var/www/html \
+  --risk-bands ./config/custom-risk-bands.json \
+  --apply
+
+# 9. SEO メタを 1 つの JSON にまとめる（Yoast / Rank Math / AIOSEO を統合）
+wp2emdash seo extract-meta --wp-root /var/www/html
+#   → wp2emdash-output/seo-meta.json
+
+# 10. .htaccess + redirect 系プラグインをまとめて抽出
+wp2emdash seo extract-redirects --wp-root /var/www/html
+#   → wp2emdash-output/seo-redirects.json
+
+# 11. 旧サイト / 新サイトの URL マップを突き合わせる
+wp post list --post_type=any --post_status=publish --fields=url --format=csv \
+  > wp-urls.txt
+wp2emdash seo url-map --old wp-urls.txt --new emdash-urls.txt
+#   → wp2emdash-output/seo-url-map.json
+#   matched / only_in_old（要 redirect）/ only_in_new（新規ページ）
+```
+
+## v0.1 / v0.2 / v0.4 の機能
+
+| サブコマンド | 役割 | 主なフラグ |
+| --- | --- | --- |
+| `doctor` | `wp` / `wrangler` / `git` 等の存在確認 | `--json` |
+| `audit` | WP-CLI / SSH / HTTP agent で 14 観点を計測してスコア化 | `--wp-root` `--write` `--json` `--ssh` `--agent-url` |
+| `db plan` | `summary.json` から DB 移行計画を JSON / Markdown で生成 | `--from` `--preset` `--write` `--json` |
+| `media scan` | ローカル / SSH / HTTP agent で JSON manifest を生成 | `--dir` `--hash` `--max-files` `--histogram-only` `--ssh` `--agent-url` |
+| `report` | `summary.json` から `risk-report.md` を再生成 | `--from` `--stdout` |
+| `run --preset` | 5 種のフェーズプリセットを実行 | `--preset` `--wp-root` `--dry-run` `--apply` `--ssh` `--agent-audit-url` `--agent-media-url` |
+| `secrets check` | preset ごとに必要な secret env var の存在を確認 | `--profile` `--json` |
+| `seo extract-meta` | Yoast / Rank Math / AIOSEO の postmeta を 1 枚の JSON にまとめる | `--wp-root` `--write` `--ssh` |
+| `seo extract-redirects` | `.htaccess` + Redirection / SRM プラグインから redirect を抽出 | `--wp-root` `--write` `--ssh` |
+| `seo url-map` | 旧 / 新の URL マップを突き合わせて missing / added を出す | `--old` `--new` `--write` |
+
+### v0.2 で追加したもの
+
+- `db plan`
+  `summary.json` を入力に、`wp_posts` / `wp_postmeta` / taxonomy / users / comments などを `export` / `review` / `transform` / `skip` に分類した計画を出力する。DB ダンプや書き換えは行わない。移行先（EmDash / Cloudflare D1+R2）側の落とし穴チェックリストも `target_notes` として同梱する（認証テーブルのコピー禁止 / タイムスタンプ保持の検証 / D1 の statement サイズ上限 / メディア完全性ゲート等。実移行の教訓は [`docs/case-studies/newsmedia-13k-posts-lessons.md`](docs/case-studies/newsmedia-13k-posts-lessons.md)）。
+- `secrets check`
+  `.env` を生成せず、既存の環境変数に必要な credential が揃っているかだけを検査する。対応 profile は `small-production` / `seo-production` / `media-heavy` / `custom-rebuild` / `agent`。
+
+### v0.4 で追加したもの
+
+- `seo extract-meta`
+  `wp post list` で公開済み投稿/固定ページを列挙し、Yoast / Rank Math / AIOSEO の postmeta を 1 つに正規化して `seo-meta.json` を出力する。複数プラグインが共存している場合は **Yoast > Rank Math > AIOSEO** の優先順位でマージ（`source` フィールドで由来を保持）。Yoast 14+ が使う `{prefix}yoast_indexable` テーブルも自動検出し、postmeta が空・stale な場合のエディタ上書きを取りこぼさない（postmeta 明示値 > indexable > core の優先順位、由来は `source: "yoast_indexable"`）。
+- `seo extract-redirects`
+  `.htaccess` の `Redirect` / `RedirectMatch` / `RewriteRule [R=...]` と、Redirection プラグイン (`wp_redirection_items`)、Safe Redirect Manager (`post_type=redirect_rule`) を 1 つの `seo-redirects.json` に統合する。
+- `seo url-map`
+  旧サイトと新サイトの URL リストを突き合わせ、`matched` / `only_in_old`（要 redirect） / `only_in_new`（新規ページ）に分類する。入力は **JSON か 1 行 1 URL のテキスト** どちらでも可。比較時は scheme / 末尾スラッシュ / fragment を正規化（path の大文字小文字は保持）。
+
+スコアリング規則は加点式。公開版では level / 見積り帯を `--risk-bands path/to/custom.json` で差し替えられる。以下は **同梱デフォルト policy の例**:
+
+| Level | スコア | 見積り目安 |
+| --- | --- | --- |
+| Simple | 0–20 | 5万〜20万円 |
+| Standard | 21–50 | 20万〜60万円 |
+| Complex | 51–90 | 60万〜150万円 |
+| High Risk | 91–130 | 150万〜300万円 |
+| Rebuild Project | 131+ | 300万円〜 / 個別見積り |
+
+## プリセット
+
+`wp2emdash run --preset <name>` で実行する 5 種の組み合わせ:
+
+| Preset | スコープ |
+| --- | --- |
+| `minimal` | PoC: 複雑度を測り EmDash 移行可否レポートを出すだけ |
+| `small-production` | 小規模ブログ/LP を本番化（投稿/固定ページ/uploads/standard SEO） |
+| `seo-production` | SEO を落とさない本番移行（meta / canonical / redirect / OGP） |
+| `media-heavy` | 大量画像・PDF・動画を R2 に安全移送 |
+| `custom-rebuild` | functions.php / plugins / mu-plugins / 外部連携を含む再構築案件 |
+
+`minimal` は引き続き完全実装。`small-production` / `seo-production` / `media-heavy` / `custom-rebuild` では、v0.2 時点で `db plan` / `secrets check` が preset に組み込まれており、後段の `env generate` / deploy / media sync / verify などは `todo` ステップとして残している。
+
+## 設計
+
+Clean Architecture 風に 3 層に整理：
+
+```
+cmd/
+  wp2emdash/main.go          エントリポイント
+internal/
+  cli/                        cobra コマンド定義（flag 解析 + 出力フォーマットのみ）
+  usecase/                    各サブコマンドの orchestration
+    {audit,doctor,media_scan,report,run_preset}.go
+    reporting/                JSON / Markdown レポート生成
+  domain/                     純粋なデータ型・ビジネスルール
+    audit/                    Audit / SiteInfo / ContentStats など
+    media/                    Manifest / File
+    preset/                   フェーズプリセット定義
+    score/                    スコアリングルール（純粋関数）
+  infra/                      外部システム adapter
+    wpcli/                    wp-cli を叩く auditor
+    filesystem/               uploads スキャナ
+  shell/                      os/exec の薄いラッパ（DryRun 対応）
+test/
+  e2e/                        E2E テストヘルパー（fixtures / stubs / runner）
+    tests/                    実テストケース
+legacy-bash/                  v0 相当の bash スクリプト（同じ重み付け、参照用）
+```
+
+依存方向: `cli → usecase → {domain, infra} → shell`。`domain` は外部に依存しない。
+
+設計原則は [`CONTRIBUTING.md`](CONTRIBUTING.md#設計原則) を参照。要約:
+
+- **1 コマンド = 1 責務**
+- **JSON / Markdown 出力**
+- **dry-run 既定**
+- **外部コマンドは薄くラップ**
+- **`.env` を生成・上書きしない**
+
+## HTTP Agent Schema
+
+`wp2emdash` は SSH の代わりに、WordPress 内の read-only HTTP agent からも監査値を取得できる。現時点で Go 側が期待する response schema は以下で固定。
+
+### `GET /wp-json/wp2emdash/v1/audit`
+
+認証:
+
+```http
+Authorization: Bearer <token>
+Accept: application/json
+```
+
+response:
+
+```json
+{
+  "audit": {
+    "site": {
+      "home_url": "https://example.com",
+      "site_url": "https://example.com",
+      "wp_version": "6.5.0",
+      "php_version": "8.2.12",
+      "db_prefix": "wp_",
+      "is_multisite": "no"
+    },
+    "content": {
+      "posts": 120,
+      "pages": 12,
+      "drafts": 3,
+      "private_posts": 1,
+      "categories": 8,
+      "tags": 15,
+      "users": 4,
+      "approved_comments": 22
+    },
+    "uploads": {
+      "exists": true,
+      "size": "12KB",
+      "file_count": 3,
+      "posts_with_uploads_paths": 7,
+      "posts_with_http_urls": 2
+    },
+    "theme": {
+      "active_theme": "example-theme",
+      "php_files": 12,
+      "css_files": 2,
+      "js_files": 4,
+      "page_templates": 3,
+      "hook_like_occurrences": 12,
+      "jquery_like_occurrences": 3
+    },
+    "plugins": {
+      "active_count": 2,
+      "has_acf": true,
+      "has_woocommerce": false,
+      "has_seo": true,
+      "has_form": false,
+      "has_redirect": true,
+      "has_member": false,
+      "has_multilingual": false,
+      "has_cache": true
+    },
+    "customization": {
+      "custom_post_type_count": 1,
+      "custom_taxonomy_count": 1,
+      "mu_plugin_count": 0,
+      "mu_plugin_hook_like_occurrences": 0,
+      "shortcode_post_count": 5,
+      "seo_meta_count": 11,
+      "serialized_meta_count": 9,
+      "oversized_content_count": 0,
+      "htaccess_redirect_like_lines": 0,
+      "code_redirect_like_occurrences": 0,
+      "external_integration_like_occurrences": 0
+    }
+  },
+  "warnings": [
+    {
+      "code": "content.posts",
+      "message": "probe failed"
+    }
+  ]
+}
+```
+
+### `GET /wp-json/wp2emdash/v1/media-scan`
+
+query:
+
+- `dir`
+- `hash=1`
+- `max_files=200`
+- `histogram_only=1`
+
+認証は `audit` と同じ bearer token。
+
+response:
+
+```json
+{
+  "base_dir": "wp-content/uploads",
+  "total_files": 3,
+  "total_bytes": 12,
+  "extensions": {
+    "txt": 1
+  },
+  "files": [
+    {
+      "path": "2024/01/hello.txt",
+      "size": 12,
+      "sha256": "optional",
+      "mime": "text/plain",
+      "ext": "txt"
+    }
+  ]
+}
+```
+
+Go 側の優先順位は `agent-url > ssh > local`。`--agent-url` と `--ssh` の併用はエラー。
+
+### Preset Execution With HTTP Agent
+
+`run --preset minimal` では `--agent-audit-url` と `--agent-media-url` を受け取る。
+
+推奨例:
+
+```bash
+wp2emdash run --preset minimal \
+  --agent-audit-url https://example.com/wp-json/wp2emdash/v1/audit \
+  --agent-media-url https://example.com/wp-json/wp2emdash/v1/media-scan \
+  --agent-token secret-token \
+  --wp-root /var/www/html \
+  --apply
+```
+
+後方互換のため `--agent-url` も残してあり、`--agent-audit-url` / `--agent-media-url` が未指定のときの fallback として使われる。
+
+## ロードマップ
+
+| バージョン | 含めるもの | 状態 |
+| --- | --- | --- |
+| v0.1 | doctor / audit / media scan / report / run --preset minimal | 完了 |
+| v0.2 | `env generate` (`wrangler.jsonc` 雛形) / `secrets check` / `db plan` | `secrets check` / `db plan` 実装済み、`env generate` 未着手 |
+| v0.3 | `media sync` (rclone/wrangler ラッパ) / `media verify` / 旧 `/wp-content/uploads/*` 維持 Worker 雛形 | `media sync` / `media verify` 実装済み、Worker 雛形は未 |
+| **v0.4（current）** | `seo extract-meta` / `seo extract-redirects` / URL map 比較 | 完了 |
+| v0.5 | `theme analyze` / `plugins analyze` / `mu-plugins analyze` / 再構築計画レポート | 未着手 |
+| v1.0 | 5 プリセット全実装 + GitHub Actions ワークフロー雛形生成 | 未着手 |
+
+## legacy-bash/
+
+`legacy-bash/emdash-migration-audit.sh` は Go 化前の同等機能を持つ bash スクリプト。
+
+- 軽量（Go バイナリを置けないリモート環境向け）
+- 同じスコア重み付け（変更時は両方更新するルール）
+- `wp2emdash audit` が動かない環境での fallback / リファレンス実装
+
+詳細は [`legacy-bash/README.md`](legacy-bash/README.md)。
+
+## ライセンス
+
+MIT — [`LICENSE`](LICENSE)。
+
+## 関連
+
+- [EmDash CMS](https://github.com/emdash-cms/emdash) — 移行先 CMS
+- [Cloudflare D1](https://developers.cloudflare.com/d1/) / [R2](https://developers.cloudflare.com/r2/) — EmDash の標準デプロイ先
+- [WP-CLI](https://wp-cli.org/) — `wp2emdash audit` が裏で叩く
+## Testing
+
+```bash
+make test
+make test TEST_RUN=TestComputeAccumulatesSignals
+make test-e2e
+make test-e2e E2E_RUN=TestAuditCommand
+make test-all
+make lint
+make fix
+```
+
+`make test` は通常の Go テストを実行し、`test/e2e/tests` は `make test-e2e` でのみ有効化される。

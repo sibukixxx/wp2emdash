@@ -1,7 +1,7 @@
 # AGENTS.md
 
 このリポジトリで作業するエージェント（Claude Code / Codex / Cursor 等）向けの正典ガイド。
-人間向けの導入は [`README.md`](README.md)、英語版の概要は [`README.en.md`](README.en.md)、設計原則の詳細は [`CONTRIBUTING.md`](CONTRIBUTING.md) を参照。
+人間向けの導入は英語版 [`README.md`](README.md)、日本語版 [`README.ja.md`](README.ja.md)、中国語版 [`README.zh-CN.md`](README.zh-CN.md)、設計原則の詳細は [`CONTRIBUTING.md`](CONTRIBUTING.md) を参照。
 
 ## プロジェクト概要
 
@@ -150,6 +150,8 @@ docs(readme): preset一覧をv0.3に更新
 
 ## 参考リソース
 
-- [README.md](README.md) — 機能一覧・プリセット・ロードマップ
+- [README.md](README.md) — 英語版の機能一覧・プリセット・ロードマップ
+- [README.ja.md](README.ja.md) — 日本語版
+- [README.zh-CN.md](README.zh-CN.md) — 简体中文版
 - [CONTRIBUTING.md](CONTRIBUTING.md) — 設計原則・PR フロー
 - [legacy-bash/README.md](legacy-bash/README.md) — bash 版の挙動と互換性メモ
