@@ -7,7 +7,7 @@ import (
 	"github.com/sibukixxx/wp2emdash/internal/domain/audit"
 )
 
-// Level groups the numeric score into the five sales-facing bands.
+// Level groups the numeric score into legacy technical bands.
 type Level string
 
 const (
@@ -29,6 +29,8 @@ type Reason struct {
 type Result struct {
 	Score    int      `json:"score"`
 	Level    Level    `json:"level"`
+	// Estimate is retained for summary.json compatibility. The bundled public
+	// policy does not provide estimates or pricing.
 	Estimate string   `json:"estimate"`
 	Reasons  []Reason `json:"reasons"`
 }

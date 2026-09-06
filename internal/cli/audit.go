@@ -26,7 +26,7 @@ Run this on the WordPress server (or anywhere with wp-cli access to it).`,
 	}
 	cmd.Flags().String("wp-root", ".", "WordPress install root (directory containing wp-config.php)")
 	cmd.Flags().Bool("write", true, "write summary.json + risk-report.md to --out")
-	cmd.Flags().String("risk-bands", "", "path to a JSON file that defines public risk bands and estimates")
+	cmd.Flags().String("risk-bands", "", "path to a legacy risk-band policy (estimate field retained for compatibility)")
 	cmd.Flags().String("agent-url", "", "HTTP endpoint for a read-only audit agent")
 	cmd.Flags().String("agent-token", "", "bearer token for --agent-url")
 	cmd.Flags().Duration("agent-timeout", 30*time.Second, "HTTP timeout for --agent-url")

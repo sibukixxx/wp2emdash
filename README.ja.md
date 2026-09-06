@@ -2,11 +2,14 @@
 
 [English](README.md) | 日本語 | [简体中文](README.zh-CN.md)
 
-WordPress → EmDash 移行を **フェーズ別の小さなコマンド群** として実行する Go 製 CLI。Unix 思想に倣い、`wp-cli` / `wrangler` / `rclone` などの既存ツールを薄くラップして JSON / Markdown を出力するので、他ツールに繋げやすい。
+`wp2emdash` は **WordPress Migration Assessment & Verification Toolkit** です。技術的事実を測定・検出・検証し、EvidenceをJSON / Markdownとして出力します。既存のWordPress → EmDash移行コマンドも維持します。
+
+Public OSSの責務はFacts / Evidence / Signals / 決定論的なTechnical Score / Snapshot / Verificationまでです。TechVit固有の顧客診断、営業Recommendation、見積り、Pricing、Proposal、CRM、営業automationは実装しません。
 
 > **EmDashはWordPressコンテンツを取り込み、wp2emdashは重要なものが失われていないことを証明します。** 公式ImporterのWXR/plugin import、Gutenberg変換、schema作成、media rewriteは再実装せず、`content verify` がID照合台帳、HTML ↔ Portable Textの意味比較、mapped fieldの欠落検出、CI/cutover gateを提供する。
 
 ```
+wp2emdash assess         → read-onlyの技術Assessmentを一括取得
 wp2emdash audit          → 複雑度を計測・スコア化
 wp2emdash db plan        → summary.json から DB 移行計画を生成
 wp2emdash media scan     → wp-content/uploads を JSON manifest 化
@@ -51,6 +54,10 @@ go install github.com/sibukixxx/wp2emdash/cmd/wp2emdash@latest
 WordPress サーバ（または `wp-config.php` がある場所）で:
 
 ```bash
+# Full Assessment（local WP-CLI / SSH / read-only HTTP Agent）
+wp2emdash assess --wp-root /var/www/html --out ./assessment
+wp2emdash assess --ssh user@example.com --wp-root /var/www/html --out ./assessment
+
 # 1. 依存ツールが揃っているか確認
 wp2emdash doctor
 
@@ -64,7 +71,7 @@ wp2emdash audit \
   --agent-url https://example.com/wp-json/wp2emdash/v1/audit \
   --agent-token secret-token
 
-# 公開版ではリスク帯/見積り帯の policy を差し替え可能
+# legacy risk-band policyの差し替え（互換用途）
 wp2emdash audit \
   --wp-root /var/www/html \
   --risk-bands ./config/custom-risk-bands.json
@@ -128,6 +135,7 @@ wp2emdash seo url-map --old wp-urls.txt --new emdash-urls.txt
 
 | サブコマンド | 役割 | 主なフラグ |
 | --- | --- | --- |
+| `assess` | Facts / Evidence / Signals / Technical Score / runtimeをread-onlyで集約 | `--wp-root` `--out` `--json` `--ssh` `--agent-url` |
 | `doctor` | `wp` / `wrangler` / `git` 等の存在確認 | `--json` |
 | `audit` | WP-CLI / SSH / HTTP agent で 14 観点を計測してスコア化 | `--wp-root` `--write` `--json` `--ssh` `--agent-url` |
 | `db plan` | `summary.json` から DB 移行計画を JSON / Markdown で生成 | `--from` `--preset` `--write` `--json` |
@@ -155,15 +163,7 @@ wp2emdash seo url-map --old wp-urls.txt --new emdash-urls.txt
 - `seo url-map`
   旧サイトと新サイトの URL リストを突き合わせ、`matched` / `only_in_old`（要 redirect） / `only_in_new`（新規ページ）に分類する。入力は **JSON か 1 行 1 URL のテキスト** どちらでも可。比較時は scheme / 末尾スラッシュ / fragment を正規化（path の大文字小文字は保持）。
 
-スコアリング規則は加点式。公開版では level / 見積り帯を `--risk-bands path/to/custom.json` で差し替えられる。以下は **同梱デフォルト policy の例**:
-
-| Level | スコア | 見積り目安 |
-| --- | --- | --- |
-| Simple | 0–20 | 5万〜20万円 |
-| Standard | 21–50 | 20万〜60万円 |
-| Complex | 51–90 | 60万〜150万円 |
-| High Risk | 91–130 | 150万〜300万円 |
-| Rebuild Project | 131+ | 300万円〜 / 個別見積り |
+スコアリング規則は加点式です。旧来のlevel bandは互換性のため`--risk-bands path/to/custom.json`で差し替え可能ですが、同梱Public policyは見積り・Pricingを提供しません。新しいconsumerは`assess`のEvidence付きTechnical Score breakdownを利用してください。
 
 ## プリセット
 

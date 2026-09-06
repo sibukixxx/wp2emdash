@@ -103,7 +103,9 @@ func RenderMarkdown(w io.Writer, b Bundle) error {
 	wln("- PHP: %s", a.Site.PHPVersion)
 	wln("- Active theme: %s", a.Theme.ActiveTheme)
 	wln("- **Risk score: %d (%s)**", s.Score, s.Level)
-	wln("- Rough estimate: %s", s.Estimate)
+	// Kept in the legacy report for schema compatibility. The bundled public
+	// policy explicitly does not provide estimates or pricing.
+	wln("- Estimate: %s", s.Estimate)
 	if len(b.Warnings) > 0 {
 		wln("- Audit warnings: %d", len(b.Warnings))
 	}
