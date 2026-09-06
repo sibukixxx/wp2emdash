@@ -50,8 +50,8 @@ func runContentSnapshot(cmd *cobra.Command, _ []string) error {
 
 func newContentVerifyCmd() *cobra.Command {
 	cmd := &cobra.Command{Use: "verify", Short: "Prove WordPress content survived an EmDash import", RunE: runContentVerify}
-	cmd.Flags().String("expected", "wp2emdash-output/content-wordpress.json", "WordPress snapshot")
-	cmd.Flags().String("actual", "wp2emdash-output/content-emdash.json", "EmDash snapshot")
+	cmd.Flags().String("expected", "", "WordPress snapshot (default: --out/content-wordpress.json)")
+	cmd.Flags().String("actual", "", "EmDash snapshot (default: --out/content-emdash.json)")
 	cmd.Flags().String("map", "", "content mapping JSON")
 	cmd.Flags().String("policy", "", "verification gate policy JSON")
 	cmd.Flags().String("report", "", "JSON report path")
@@ -62,7 +62,16 @@ func newContentVerifyCmd() *cobra.Command {
 }
 
 func runContentVerify(cmd *cobra.Command, _ []string) error {
-	res, err := usecase.RunContentVerify(usecase.ContentVerifyParams{ExpectedPath: mustString(cmd, "expected"), ActualPath: mustString(cmd, "actual"), MapPath: mustString(cmd, "map"), PolicyPath: mustString(cmd, "policy"), OutDir: mustString(cmd, "out"), ReportPath: mustString(cmd, "report"), MarkdownPath: mustString(cmd, "markdown"), ResolvedMapPath: mustString(cmd, "resolved-map"), Version: Version, Write: mustBool(cmd, "write")})
+	outDir := mustString(cmd, "out")
+	expectedPath := mustString(cmd, "expected")
+	if expectedPath == "" {
+		expectedPath = filepath.Join(outDir, "content-wordpress.json")
+	}
+	actualPath := mustString(cmd, "actual")
+	if actualPath == "" {
+		actualPath = filepath.Join(outDir, "content-emdash.json")
+	}
+	res, err := usecase.RunContentVerify(usecase.ContentVerifyParams{ExpectedPath: expectedPath, ActualPath: actualPath, MapPath: mustString(cmd, "map"), PolicyPath: mustString(cmd, "policy"), OutDir: outDir, ReportPath: mustString(cmd, "report"), MarkdownPath: mustString(cmd, "markdown"), ResolvedMapPath: mustString(cmd, "resolved-map"), Version: Version, Write: mustBool(cmd, "write")})
 	if err != nil {
 		return err
 	}

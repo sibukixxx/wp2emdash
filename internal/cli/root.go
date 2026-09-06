@@ -15,8 +15,10 @@ var Version = "0.1.0-dev"
 func NewRootCmd() *cobra.Command {
 	root := &cobra.Command{
 		Use:   "wp2emdash",
-		Short: "WordPress → EmDash migration orchestrator",
-		Long: `wp2emdash is a Unix-style CLI that decomposes a WordPress → EmDash migration
+		Short: "WordPress migration assessment and verification toolkit",
+		Long: `wp2emdash is a Unix-style WordPress migration assessment and verification toolkit.
+It collects technical facts and evidence without deciding whether or where to migrate.
+It also decomposes a WordPress → EmDash migration
 into small, composable phases (audit, media scan, db plan, env generate, deploy,
 cutover). It wraps wp-cli, wrangler, rclone and friends rather than reimplementing
 them, and emits JSON/Markdown so its output can flow into other tools.
@@ -33,6 +35,7 @@ commands require an explicit confirmation flag.`,
 	root.PersistentFlags().String("out", "wp2emdash-output", "directory for generated reports and manifests")
 
 	root.AddCommand(newDoctorCmd())
+	root.AddCommand(newAssessCmd())
 	root.AddCommand(newAuditCmd())
 	root.AddCommand(newDBCmd())
 	root.AddCommand(newMediaCmd())

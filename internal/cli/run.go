@@ -31,7 +31,7 @@ the filesystem (except --out). Pass --apply to actually execute.`,
 	cmd.Flags().String("wp-root", ".", "WordPress install root")
 	cmd.Flags().Bool("dry-run", true, "print steps without executing them")
 	cmd.Flags().Bool("apply", false, "actually execute (overrides --dry-run)")
-	cmd.Flags().String("risk-bands", "", "path to a JSON file that defines public risk bands and estimates")
+	cmd.Flags().String("risk-bands", "", "path to a legacy risk-band policy (estimate field retained for compatibility)")
 	cmd.Flags().String("agent-url", "", "HTTP endpoint for a read-only preset agent")
 	cmd.Flags().String("agent-audit-url", "", "HTTP endpoint for the preset audit step")
 	cmd.Flags().String("agent-media-url", "", "HTTP endpoint for the preset media scan steps")

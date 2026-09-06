@@ -8,7 +8,9 @@
 
 English | [日本語](README.ja.md) | [简体中文](README.zh-CN.md)
 
-`wp2emdash` is a Go CLI that breaks a WordPress → EmDash migration into small, phase-oriented commands. It follows a Unix-style approach: wrap existing tools such as `wp-cli`, `wrangler`, and `rclone` thinly, then emit JSON or Markdown that can be piped into other tooling.
+`wp2emdash` is a **WordPress Migration Assessment & Verification Toolkit**. It measures, detects, verifies, and emits evidence that can be consumed by people, CI, or other tools. Its existing WordPress → EmDash commands remain supported.
+
+The public OSS boundary ends at technical facts, evidence, signals, deterministic reference scores, snapshots, and verification. It does not contain TechVit customer-diagnosis rules, sales recommendations, estimates, pricing, proposals, CRM, or lead automation.
 
 > **EmDash imports your WordPress content. wp2emdash proves that nothing important was lost.** The official importer owns WXR/plugin import, Gutenberg conversion, schema creation, and media rewriting. `content verify` independently adds durable ID evidence, semantic HTML ↔ Portable Text comparison, mapped-field loss detection, and a reproducible CI/cutover gate.
 
@@ -29,6 +31,7 @@ English | [日本語](README.ja.md) | [简体中文](README.zh-CN.md)
 - [License](#license)
 
 ```
+wp2emdash assess                 -> collect a read-only, evidence-first assessment bundle
 wp2emdash audit                  -> measure migration complexity and score risk
 wp2emdash db plan                -> generate a DB migration plan from summary.json
 wp2emdash media scan             -> build a JSON manifest of wp-content/uploads
@@ -74,6 +77,10 @@ go install github.com/sibukixxx/wp2emdash/cmd/wp2emdash@latest
 Run on a WordPress host, or anywhere that has access to a WordPress install:
 
 ```bash
+# Read-only full assessment (local WP-CLI, SSH, or the HTTP agent)
+wp2emdash assess --wp-root /var/www/html --out ./assessment
+wp2emdash assess --ssh user@example.com --wp-root /var/www/html --out ./assessment
+
 # 1. Check external dependencies
 wp2emdash doctor
 
@@ -85,7 +92,7 @@ wp2emdash audit \
   --agent-url https://example.com/wp-json/wp2emdash/v1/audit \
   --agent-token secret-token
 
-# 4. Override public-facing level/estimate policy
+# 4. Override the legacy risk-band policy (compatibility path)
 wp2emdash audit \
   --wp-root /var/www/html \
   --risk-bands ./config/custom-risk-bands.json
@@ -129,6 +136,7 @@ wp2emdash run --preset minimal \
 
 Artifacts are written to `wp2emdash-output/` by default:
 
+- `summary.json`, `inventory.json`, `signals.json`, `technical-report.md` (`assess`)
 - `summary.json`
 - `risk-report.md`
 - `media-manifest.json`
@@ -137,6 +145,7 @@ Artifacts are written to `wp2emdash-output/` by default:
 
 | Command | Purpose | Main Flags |
 | --- | --- | --- |
+| `assess` | Aggregate read-only facts, evidence-backed signals, timing, and technical score | `--wp-root` `--out` `--json` `--ssh` `--agent-url` |
 | `doctor` | Check required tools such as `wp`, `wrangler`, and `git` | `--json` |
 | `audit` | Measure 14 migration signals via local WP-CLI, SSH, or HTTP agent | `--wp-root` `--write` `--json` `--ssh` `--agent-url` `--risk-bands` |
 | `db plan` | Generate a JSON/Markdown DB migration plan from `summary.json` | `--from` `--preset` `--write` `--json` |
@@ -179,15 +188,8 @@ wp2emdash content verify
 
 Snapshots contain hashes and structural evidence, not raw post bodies. Verification checks identity, status, title, timestamps, visible text, headings, links, images, and configured custom fields. Explicit WordPress ID ↔ EmDash ID mappings win; unique slug matches are reported as warnings and written to `content-resolved-map.json` for subsequent deterministic runs. Critical/errors fail the command for CI and cutover use; `--policy` can override stable issue-code severities or allowed counts.
 
-The core scoring rubric is additive. Public-facing level labels and estimate bands are replaceable through `--risk-bands path/to/custom.json`. The table below is only the example shipped in the default bundled policy:
+The core scoring rubric is additive. Legacy level bands remain replaceable through `--risk-bands path/to/custom.json` for compatibility. The bundled public policy does not provide estimates or pricing. New consumers should use `assess` and its evidence-backed technical score breakdown.
 
-| Level | Score Range | Example Estimate |
-| --- | --- | --- |
-| Simple | 0–20 | 50k–200k JPY |
-| Standard | 21–50 | 200k–600k JPY |
-| Complex | 51–90 | 600k–1.5M JPY |
-| High Risk | 91–130 | 1.5M–3M JPY |
-| Rebuild Project | 131+ | 3M+ JPY / custom estimate |
 
 ## Presets
 
@@ -220,6 +222,14 @@ test/
   e2e/          end-to-end helpers and fixtures
 legacy-bash/    reference bash implementation
 ```
+
+## Assessment scope and non-goals
+
+`assess` requires local WP-CLI access, SSH access, or a compatible read-only HTTP agent. A public URL alone cannot expose private plugin state, database-backed custom fields, drafts, users, or filesystem evidence. A future `public-audit` command, if added, will explicitly identify its scope as **Public Surface Only** and will not be described as a full assessment.
+
+The assessment pipeline is `Facts → Signals → Technical Score`. Missing probes are represented as `unavailable` rather than silently interpreted as zero or false. Every scored signal carries evidence, and scoring is deterministic for the same facts. See [`docs/assessment.md`](docs/assessment.md) for schema and compatibility details.
+
+Non-goals include deciding whether WordPress should be replaced, recommending EmDash/Astro/headless CMS, estimating or pricing work, generating proposals or customer-facing sales reports, guaranteeing SEO rankings, and vulnerability exploitation.
 
 Dependency direction: `cli -> usecase -> {domain, infra} -> shell`.
 
