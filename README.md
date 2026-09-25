@@ -14,6 +14,38 @@ The public OSS boundary ends at technical facts, evidence, signals, deterministi
 
 > **EmDash imports your WordPress content. wp2emdash proves that nothing important was lost.** The official importer owns WXR/plugin import, Gutenberg conversion, schema creation, and media rewriting. `content verify` independently adds durable ID evidence, semantic HTML ↔ Portable Text comparison, mapped-field loss detection, and a reproducible CI/cutover gate.
 
+
+<!-- role-boundary:v1 -->
+## Role and boundaries
+
+**Role:** WordPress migrationのtechnical facts・signals・snapshots・verification evidenceを生成する **evidence producer / verification toolkit**。
+
+### Owns
+
+- read-only WordPress technical assessment
+- deterministic technical signals and reference scores
+- migration/content verification artifacts
+- source provenance and reproducible cutover evidence
+
+### Does not own
+
+- customer-specific business recommendation
+- pricing, proposal, CRM, or sales workflow
+- generic research/hypothesis semantics
+- privileged deployment authority
+- a managed multi-customer control plane
+
+### Integration
+
+```text
+WordPress / migration target
+        ↓
+    wp2emdash
+        ↓ evidence / assessment artifact
+human / research engine / private decision layer
+```
+
+Public artifacts should remain consumer-neutral. A downstream system may interpret the evidence, but this OSS repository must not encode a particular customer's commercial decision.
 ## Table of Contents
 
 - [Why Small Commands](#why-small-commands)
